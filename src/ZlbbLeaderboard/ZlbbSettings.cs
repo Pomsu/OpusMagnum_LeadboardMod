@@ -19,7 +19,7 @@ namespace ZlbbLeaderboard
 		public string AuthorName = "";
 
 		[YamlIgnore]
-		[SettingsLabel("Set author name (needed for submitting)")]
+		[SettingsLabel("Set author name")]
 		public SettingsButton SetAuthorName = ZlbbMod.OpenAuthorNameScreen;
 
 		[YamlIgnore]
