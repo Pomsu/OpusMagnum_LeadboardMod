@@ -57,4 +57,8 @@ Layout: `src/ZlbbCore` (parsing, sync, snapshot, binning, layout, submit - no ga
 Never commit decompiled game code or game binaries.
 
 ## Status
-Early development. Contact with the zlbb maintainers is pending; real submissions should wait for their reply.
+Early development, no release yet. Contact with the zlbb maintainers is pending; real submissions should wait for their reply.
+Not yet verified in the game: the submit flow end to end, and the measured height / width / bounding hexagon against zlbb.
+
+## License
+MIT, see `LICENSE`.
