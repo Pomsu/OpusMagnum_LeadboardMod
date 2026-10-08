@@ -68,11 +68,12 @@ namespace ZlbbLeaderboard
 			DialogDraw.Title("Author name");
 			DialogDraw.Lines(
 				"The name your solutions are published under on zlbb.faendir.com.",
-				"Letters, digits, space, _ - and . (up to " + AuthorName.MaxLength + ").");
+				"Use your own name - for example your Reddit or Discord username.",
+				"It should identify you as a person, not this mod. (Letters, digits, space, _ - . up to " + AuthorName.MaxLength + ")");
 			bool caret = ((int)(time * 2f)) % 2 == 0;
-			UI.DrawText(text + (caret ? "_" : " "), DialogDraw.Center() + new Vector2(0f, 10f), UI.Title, Color.White, TextAlignment.Centred);
+			UI.DrawText(text + (caret ? "_" : " "), DialogDraw.Center() + new Vector2(0f, -30f), UI.Title, Color.White, TextAlignment.Centred);
 			if (error != null)
-				UI.DrawText(error, DialogDraw.Center() + new Vector2(0f, -40f), UI.SubTitle, Color.FromHex(16752192), TextAlignment.Centred);
+				UI.DrawText(error, DialogDraw.Center() + new Vector2(0f, -85f), UI.SubTitle, Color.FromHex(16752192), TextAlignment.Centred);
 
 			bool ok = DialogDraw.Button("OK", -290f) || Input.IsSdlKeyPressed(SDL.enum_160.SDLK_RETURN);
 			bool cancel = DialogDraw.Button("CANCEL", 30f) || DialogDraw.EscapePressed();
@@ -229,7 +230,7 @@ namespace ZlbbLeaderboard
 	}
 
 	/// <summary>
-	/// Asks before anything is sent (unless auto-submit is on), uploads in the background and shows the result. Nothing leaves the PC
+	/// Asks before anything is sent, uploads in the background and shows the result. Nothing leaves the PC
 	/// before the player presses SUBMIT here.
 	/// </summary>
 	internal sealed class SubmitScreen : IScreen
@@ -245,15 +246,13 @@ namespace ZlbbLeaderboard
 		private volatile SubmitResult result;
 		private float time;
 
-		public SubmitScreen(string puzzleName, string author, string gifName, byte[] solution, byte[] gif, bool startNow)
+		public SubmitScreen(string puzzleName, string author, string gifName, byte[] solution, byte[] gif)
 		{
 			this.puzzleName = puzzleName;
 			this.author = author;
 			this.gifName = gifName;
 			this.solution = solution;
 			this.gif = gif;
-			if (startNow)
-				StartUpload();
 		}
 
 		public bool method_1037() { return false; }

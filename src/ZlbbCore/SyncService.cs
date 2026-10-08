@@ -170,6 +170,21 @@ namespace ZlbbCore
 			bool bootstrap = !haveData || forceBootstrap;
 			DateTime since = bootstrap ? BootstrapSince : lastSyncUtc.Value - Overlap;
 			outcome.Bootstrap = bootstrap;
+
+			// Never let a problem on this PC turn into repeated 22 MB downloads of the whole history (zlbb is a volunteer-run server).
+			if (bootstrap)
+			{
+				string blocked = WhyFullDownloadIsBlocked(forceBootstrap);
+				if (blocked != null)
+				{
+					outcome.State = haveData ? SyncState.Stale : SyncState.Failed;
+					outcome.Error = blocked;
+					state = outcome.State;
+					log("full download not started: " + blocked);
+					return outcome;
+				}
+			}
+
 			DateTime requestStart = utcNow();
 			var changes = new List<RecordChange>();
 			FetchStats fetched;
@@ -188,6 +203,9 @@ namespace ZlbbCore
 				log("sync failed (" + (bootstrap ? "full download" : "diff") + "): " + e.Message + (haveData ? " - using the older snapshot" : ""));
 				return outcome;
 			}
+
+			if (bootstrap)
+				WritePendingStamp(); // the history is downloaded; until a readable snapshot exists, do not fetch it again automatically
 
 			RecordIndex target = bootstrap ? new RecordIndex() : index;
 			target.ApplyAll(changes);
@@ -210,6 +228,13 @@ namespace ZlbbCore
 				saved = false;
 				log("could not save snapshot: " + e.Message);
 			}
+			if (saved && bootstrap && SnapshotStore.Load(snapshotPath) == null)
+			{
+				saved = false; // written but not readable again: the next start would download everything once more
+				log("the saved snapshot cannot be read back");
+			}
+			if (saved && bootstrap)
+				DeletePendingStamp();
 			if (saved)
 				lock (runLock)
 					lastSyncUtc = syncTime;
@@ -222,6 +247,70 @@ namespace ZlbbCore
 			log((bootstrap ? "full download" : "diff") + " applied: " + changes.Count + " changes, " + target.Count + " records");
 			RaiseUpdated();
 			return outcome;
+		}
+
+		/// <summary>After a finished full download that could not be stored, the automatic retry waits this long.</summary>
+		public static readonly TimeSpan PendingBlock = TimeSpan.FromHours(6);
+
+		private string PendingStampPath
+		{
+			get { return snapshotPath + ".pending"; }
+		}
+
+		private string WhyFullDownloadIsBlocked(bool requestedByPlayer)
+		{
+			if (!SnapshotStore.CanWrite(snapshotPath))
+				return "the cache folder cannot be written, so the history (about 22 MB) could not be kept and would be downloaded again at every start";
+			if (requestedByPlayer)
+				return null;
+			try
+			{
+				if (File.Exists(PendingStampPath))
+				{
+					long ticks;
+					if (long.TryParse(File.ReadAllText(PendingStampPath).Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out ticks)
+						&& ticks > 0 && ticks <= DateTime.MaxValue.Ticks)
+					{
+						DateTime made = new DateTime(ticks, DateTimeKind.Utc);
+						DateTime now = utcNow();
+						if (made <= now.AddDays(1) && now - made < PendingBlock)
+							return "a full download was already made less than " + (int)PendingBlock.TotalHours + " hours ago but could not be stored; not repeating it automatically (the 'Re-download zlbb data' button forces it)";
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				if (!(e is IOException || e is UnauthorizedAccessException))
+					throw;
+			}
+			return null;
+		}
+
+		private void WritePendingStamp()
+		{
+			try
+			{
+				File.WriteAllText(PendingStampPath, utcNow().Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			}
+			catch (Exception e)
+			{
+				if (!(e is IOException || e is UnauthorizedAccessException))
+					throw;
+			}
+		}
+
+		private void DeletePendingStamp()
+		{
+			try
+			{
+				if (File.Exists(PendingStampPath))
+					File.Delete(PendingStampPath);
+			}
+			catch (Exception e)
+			{
+				if (!(e is IOException || e is UnauthorizedAccessException))
+					throw;
+			}
 		}
 
 		private void RaiseUpdated()

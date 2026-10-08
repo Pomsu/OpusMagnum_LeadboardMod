@@ -1,7 +1,7 @@
 Name: ZlbbLeaderboard
 Version: 0.1.0
 Title: "ZLBB Leaderboard"
-Desc: "Shows zlbb.faendir.com leaderboard data in the histograms."
+Desc: "Shows zlbb.faendir.com leaderboard data in the histograms. Developed with AI assistance (Claude Code)."
 DLL: "ZlbbLeaderboard.dll"
 Dependencies:
 - Name: Quintessential

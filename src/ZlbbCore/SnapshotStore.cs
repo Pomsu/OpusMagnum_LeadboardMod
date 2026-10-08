@@ -21,6 +21,27 @@ namespace ZlbbCore
 		public const int SchemaVersion = 1;
 		private const uint Magic = 0x53424C5A; // "ZLBS"
 
+		/// <summary>True when a file can be created next to the snapshot (checked before a big download, so a read-only folder cannot cause endless re-downloads).</summary>
+		public static bool CanWrite(string path)
+		{
+			try
+			{
+				string directory = Path.GetDirectoryName(path);
+				if (!string.IsNullOrEmpty(directory))
+					Directory.CreateDirectory(directory);
+				string probe = path + ".probe";
+				File.WriteAllBytes(probe, new byte[] { 1 });
+				File.Delete(probe);
+				return true;
+			}
+			catch (Exception e)
+			{
+				if (e is IOException || e is UnauthorizedAccessException || e is NotSupportedException || e is ArgumentException || e is System.Security.SecurityException)
+					return false;
+				throw;
+			}
+		}
+
 		public static void Save(string path, Snapshot snapshot)
 		{
 			string directory = Path.GetDirectoryName(path);

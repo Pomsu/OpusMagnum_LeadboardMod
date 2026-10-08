@@ -12,9 +12,6 @@ namespace ZlbbLeaderboard
 		[SettingsLabel("Show zlbb leaderboard data in the histograms")]
 		public bool Enabled = true;
 
-		[SettingsLabel("Submit solves without asking after recording a GIF")]
-		public bool AutoSubmit = false;
-
 		/// <summary>The name solutions are published under on zlbb. Empty = submitting is off.</summary>
 		public string AuthorName = "";
 

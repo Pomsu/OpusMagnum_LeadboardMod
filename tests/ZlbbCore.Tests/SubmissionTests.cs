@@ -39,6 +39,32 @@ namespace ZlbbCore.Tests
 			Assert.False(string.IsNullOrEmpty(error));
 		}
 
+		[Theory]
+		[InlineData("ZlbbLeaderboard")]
+		[InlineData("zlbb")]
+		[InlineData("  Quintessential ")]
+		[InlineData("Opus Magnum")]
+		[InlineData("mod")]
+		[InlineData("Default")]
+		public void Names_of_programs_are_refused_because_a_name_should_identify_a_person(string input)
+		{
+			string cleaned, error;
+			Assert.False(AuthorName.TryClean(input, out cleaned, out error));
+			Assert.Contains("your own name", error);
+		}
+
+		[Theory]
+		[InlineData("zlbb_fan")]
+		[InlineData("Modesty")]
+		[InlineData("u/some_reddit_user")]
+		public void Names_that_merely_contain_such_words_are_fine(string input)
+		{
+			string cleaned, error;
+			// 'u/...' contains a slash, which is not allowed - only the first two must pass
+			bool ok = AuthorName.TryClean(input, out cleaned, out error);
+			Assert.Equal(!input.Contains("/"), ok);
+		}
+
 		[Fact]
 		public void Exactly_32_characters_are_fine_33_are_not()
 		{

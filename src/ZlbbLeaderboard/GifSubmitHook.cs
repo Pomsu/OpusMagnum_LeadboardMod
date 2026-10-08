@@ -8,7 +8,7 @@ namespace ZlbbLeaderboard
 	/// <summary>
 	/// Mirrors what the current game version does for zlbb: when a GIF has been recorded, offer to submit the solution with it.
 	/// The old game build Quintessential runs on lacks that feature. Cancelled recordings (class_92.method_78) are ignored, and nothing
-	/// is sent unless the author name is set and the player confirms (or turned on automatic submitting in the mod settings).
+	/// is sent unless the author name is set and the player confirms in the window; there is deliberately no automatic submitting.
 	/// </summary>
 	internal static class GifSubmitHook
 	{
@@ -110,8 +110,9 @@ namespace ZlbbLeaderboard
 
 			byte[] gif = File.ReadAllBytes(gifPath);
 			byte[] solutionBytes = solution.method_1959();
-			ZlbbMod.Log("GIF recorded for " + puzzle.field_2766 + " (" + gif.Length + " bytes): " + (ZlbbMod.Config.AutoSubmit ? "submitting automatically" : "asking before submitting"));
-			UI.OpenScreen(new SubmitScreen(puzzle.field_2767 ?? puzzle.field_2766, cleaned, Path.GetFileName(gifPath), solutionBytes, gif, ZlbbMod.Config.AutoSubmit));
+			// zlbb's maintainer asks that nothing is submitted without a human decision: the player always has to press SUBMIT
+			ZlbbMod.Log("GIF recorded for " + puzzle.field_2766 + " (" + gif.Length + " bytes): asking before submitting");
+			UI.OpenScreen(new SubmitScreen(puzzle.field_2767 ?? puzzle.field_2766, cleaned, Path.GetFileName(gifPath), solutionBytes, gif));
 		}
 	}
 }

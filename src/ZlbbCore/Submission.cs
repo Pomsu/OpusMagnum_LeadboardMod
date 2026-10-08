@@ -19,6 +19,8 @@ namespace ZlbbCore
 			error = null;
 			if (cleaned.Length == 0)
 				error = "the name is empty";
+			else if (LooksLikeSoftware(cleaned))
+				error = "please use your own name (e.g. your Reddit or Discord username), not the name of a program";
 			else if (cleaned.Length > MaxLength)
 				error = "the name is longer than " + MaxLength + " characters";
 			else
@@ -29,6 +31,15 @@ namespace ZlbbCore
 						break;
 					}
 			return error == null;
+		}
+
+		private static readonly string[] SoftwareNames = { "zlbb", "zlbbleaderboard", "zlbb leaderboard", "quintessential", "opus magnum", "opusmagnum", "mod", "default", "modded lightning", "moddedlightning" };
+
+		/// <summary>zlbb's maintainer asks for names that identify a human; the mod must never publish under its own or the game's name.</summary>
+		public static bool LooksLikeSoftware(string name)
+		{
+			string normalized = (name ?? "").Trim().ToLowerInvariant();
+			return Array.IndexOf(SoftwareNames, normalized) >= 0;
 		}
 
 		public static bool IsAllowed(char c)

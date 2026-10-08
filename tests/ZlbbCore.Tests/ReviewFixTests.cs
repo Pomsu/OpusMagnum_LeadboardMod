@@ -99,18 +99,19 @@ namespace ZlbbCore.Tests
 		}
 
 		[Fact]
-		public void A_non_io_error_while_saving_does_not_leave_the_sync_stuck_or_throw()
+		public void A_cache_location_that_cannot_be_written_means_no_download_at_all()
 		{
 			using (var f = new SyncFixture())
 			{
 				f.Server.RespondWith(TestData.Array(Rec("a"), Rec("b")));
-				// a ':' inside a file name is not allowed on Windows and raises NotSupportedException (not an IOException)
-				var service = new SyncService(new ZlbbClient(f.Server.BaseUrl), Path.Combine(f.Dir.Path, "bad:name.snapshot"));
+				// the "folder" for the cache is really a file, so nothing can be created there
+				File.WriteAllText(Path.Combine(f.Dir.Path, "blocker"), "x");
+				var service = new SyncService(new ZlbbClient(f.Server.BaseUrl), Path.Combine(f.Dir.Path, "blocker", "om.snapshot"));
 				SyncOutcome outcome = service.RunOnce();
 				Assert.NotEqual(SyncState.Running, service.State);
-				Assert.Equal(2, service.Index.Count);   // the data itself is still usable for this session
-				Assert.Equal(SyncState.Fresh, outcome.State);
-				Assert.Null(service.LastSyncUtc);       // but nothing was persisted, so the next launch downloads again
+				Assert.Equal(SyncState.Failed, outcome.State);
+				Assert.Contains("cannot be written", outcome.Error);
+				Assert.Equal(0, f.Server.RequestCount);   // the 22 MB history is never fetched if it could not be kept
 			}
 		}
 

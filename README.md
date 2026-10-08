@@ -4,6 +4,19 @@ A [Quintessential](https://github.com/QuintessentialOM/Quintessential) mod for O
 leaderboard <https://zlbb.faendir.com> inside the game, drawn by the game's own histogram code in its original style, and
 (only after you confirm) submits your solutions to it. Not affiliated with the zlbb maintainers.
 
+## AI disclosure
+This mod was developed with heavy AI assistance. The code, the tests, the documentation and the code reviews were written by
+[Claude Code](https://claude.com/claude-code) (Anthropic's AI coding assistant; the commits carry a `Co-Authored-By` line). The
+human author (Pomsu) set the goals and the design decisions, tested the mod in the game, reads and decides what is published, and is
+the contact for questions. Please mention this when you share the mod. If you find a bug, it may well be the AI's - please open an issue.
+
+## Responsible use of zlbb
+zlbb's API is open to the community on the condition that it is used responsibly (confirmed by its maintainer):
+- no heavy load: one full download on the first start, then one small diff per game start, nothing while playing; a problem on the
+  player's PC (unwritable cache folder, a snapshot that cannot be stored) never leads to repeated full downloads;
+- **nothing is ever submitted without the player pressing SUBMIT** (there is deliberately no automatic submitting);
+- the author name should identify a person, e.g. a Reddit or Discord username - never the mod or the game. Everyone uses their own name.
+
 ## What it does
 - **Histograms from zlbb.** The cost / cycles / area (or instructions) panels on the puzzle screen and the "machine
   finished" screen show the best 50% of zlbb's record-setting solutions, with a fixed bar width and tidy axes. Your own
@@ -19,8 +32,7 @@ leaderboard <https://zlbb.faendir.com> inside the game, drawn by the game's own 
   not yet verified against zlbb's own numbers). Rate and the "@infinity" metrics need a steady-state simulation the game
   does not do, so they are shown as "not measurable".
 - **Submitting.** When you finish recording a GIF, a window asks "Submit to zlbb?" - nothing is sent before you press
-  SUBMIT (or turn on automatic submitting in the mod settings). It needs an author name (Mods screen > ZLBB Leaderboard >
-  Set author name). The old game build Quintessential runs on lacks the built-in zlbb submission, so this mod provides it.
+  SUBMIT. It needs an author name (Mods screen > ZLBB Leaderboard > Set author name) that identifies you, e.g. your Reddit or Discord username. The old game build Quintessential runs on lacks the built-in zlbb submission, so this mod provides it.
 
 ## Known limits
 - Height / width / bounding hexagon are remembered per solution under its four scores (`solves.txt` in the cache folder), so two
@@ -62,7 +74,8 @@ Layout: `src/ZlbbCore` (parsing, sync, snapshot, binning, layout, submit - no ga
 Never commit decompiled game code or game binaries.
 
 ## Status
-Early development, no release yet. Contact with the zlbb maintainers is pending; real submissions should wait for their reply.
+Early development, no release yet. The zlbb maintainer has been contacted and is fine with this use of the API (conditions above);
+a real test submission and the in-game checks are still pending.
 Not yet verified in the game: the submit flow end to end, and the measured height / width / bounding hexagon against zlbb.
 
 ## License
