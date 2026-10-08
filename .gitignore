@@ -9,3 +9,5 @@ decomp/
 *.exe
 *.dll
 !.config/
+
+dist/
