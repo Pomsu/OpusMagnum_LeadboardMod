@@ -16,8 +16,19 @@ namespace ZlbbLeaderboard
 			return Input.ScreenSize() / 2;
 		}
 
+		/// <summary>Darkens the screen below and draws the game's own message-box panel, so the screen underneath (e.g. the Mods list) does not shine through.</summary>
+		public static void Backdrop()
+		{
+			Vector2 screen = Input.ScreenSize();
+			class_135.method_280(new Color(0f, 0f, 0f, 0.75f), Bounds2.WithSize(new Vector2(0f, 0f), screen));
+			Vector2 size = new Vector2(Math.Min(820f, screen.X - 40f), 440f);
+			Vector2 min = (Center() - size / 2).Rounded();
+			class_135.method_268(class_238.field_1989.field_102.field_819, Color.White, min, Bounds2.WithSize(min, size));
+		}
+
 		public static void Title(string text)
 		{
+			Backdrop();
 			UI.DrawText(text, Center() + new Vector2(0f, 150f), UI.Title, Color.White, TextAlignment.Centred);
 		}
 

@@ -18,6 +18,7 @@ namespace ZlbbLeaderboard
 		[ThreadStatic] private static bool cancelling;
 		private static readonly FieldInfo RecorderEditor = typeof(class_250).GetField("field_2022", BindingFlags.Instance | BindingFlags.NonPublic);
 		private static Solution recordedSolution;
+		private static bool nameHintShown;
 
 		/// <summary>
 		/// The recorder screen is created with a solution and replays it in its own editor (field_2022); the GIF shows what that editor
@@ -89,6 +90,11 @@ namespace ZlbbLeaderboard
 			if (!ZlbbCore.AuthorName.TryClean(author, out cleaned, out reason))
 			{
 				ZlbbMod.Log("GIF recorded, but no valid author name is set, so nothing is offered for submission (" + reason + ")");
+				if (!nameHintShown)
+				{
+					nameHintShown = true; // once per session, so recording many GIFs is not nagging
+					UI.OpenScreen(new NoticeScreen("Submit to zlbb?", "Set your author name first: Mods > ZLBB Leaderboard > Set author name. Then record the GIF again."));
+				}
 				return;
 			}
 
