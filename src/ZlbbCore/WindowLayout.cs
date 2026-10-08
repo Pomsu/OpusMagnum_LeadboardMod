@@ -36,7 +36,7 @@ namespace ZlbbCore
 
 	/// <summary>
 	/// Sizes the big "all metrics" window. The game's histogram panel is a fixed 258 x 376 px sprite, so instead of scaling it the window
-	/// grows to fit as many panels as the screen allows (all 12 on any normal widescreen), paging only on very small screens.
+	/// grows to fit as many panels as the screen allows (all 17 on a wide screen such as 3440 x 1440, 12 per page on Full HD), paging on small screens.
 	/// </summary>
 	public static class WindowLayouts
 	{

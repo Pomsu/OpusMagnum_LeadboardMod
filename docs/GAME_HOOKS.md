@@ -23,7 +23,7 @@ Names are the game's obfuscated ("intermediary") names, as used by Quintessentia
 | `class_140.method_321(class_132, Vector2 position, bool isInfoScreen)` | Draws one histogram panel (258 x 376 px). Unknown `enum_133` values draw without a title and with plain numbers, so extra metrics reuse it and we add the title. Hook: `On.class_140.method_321`. |
 | `class_140.method_313(text, pos, w, h).method_824(true, true)` | Draws a button, returns true when clicked. `class_140.method_317(text, pos, width, true, true)` draws a window title. |
 | `Quintessential.UI` | `DrawLargeUiBackground`, `DrawUiFrame`, `DrawAndCheckCloseButton`, `OpenScreen`, `CloseScreen` - the pattern for a window is `Quintessential/ModsScreen.cs`. |
-| `Sim.method_484()` (`Sim.field_3824`) | The footprint: all hexes the machine touched during the run (`HexIndex.Q`, `.R`). Count = the game's Area. |
+| `Sim.method_484()` (`Sim.field_3824`) | The footprint: all hexes the machine touched during the run (`HexIndex.Q`, `.R`). Count is expected to equal the game's Area (the mod logs a warning if it does not). |
 | `SolutionEditorScreen.field_4022` (private `Maybe<Sim>`) | The running simulation. `class_257`'s constructor (finish screen) runs right after a successful run: hook `On.class_257.ctor` and read the sim there. |
 | `class_257.field_2065` (private) | The finish screen's histogram data; `field_1485` of each entry = this run's score ("now"). |
 | `Puzzle.field_2767` | Display name of a puzzle. |
@@ -36,7 +36,7 @@ Names are the game's obfuscated ("intermediary") names, as used by Quintessentia
 ## GIF recording / submission
 | Symbol | Meaning |
 |---|---|
-| `class_250` (GifRecorderScreen), ctor `(Solution)` | Owns encoder `field_2031` (`class_92`) and the simple editor `field_2022` (`class_194`); `field_2022.method_502()` returns the recorded `Solution`. Hooks: `On.class_250.ctor`, `On.class_250.method_50` (update/draw). |
+| `class_250` (GifRecorderScreen), ctor `(Solution)` | Owns encoder `field_2031` (`class_92`) and the simple editor `field_2022` (`class_194`); `field_2022.method_502()` returns the recorded `Solution`. Hook: `On.class_250.ctor` (then read `field_2022.method_502()` for the solution actually recorded). After a finished recording the recorder screen stays open ("GIF saved") until the player closes it; our confirmation window is opened on top of it from inside `class_92.method_77` - **not yet verified in game**, test once with the fake server. |
 | `class_92` (GIF encoder), ctor `(string path)` | `field_922` FileStream (path = `field_922.Name`). |
 | `class_92.method_77()` | **Finish** (writes trailer, closes). Hook `On.class_92.method_77`. |
 | `class_92.method_78()` | **Cancel** (finishes, then deletes the file). Do not submit on this one. |

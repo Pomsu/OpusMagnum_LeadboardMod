@@ -202,7 +202,7 @@ namespace ZlbbLeaderboard
 					DialogDraw.Lines(
 						puzzleName,
 						"as \"" + author + "\"",
-						"Your solution and the GIF are sent to zlbb.faendir.com and become public there.",
+						"Your solution, the GIF and its file name are sent to " + ZlbbMod.SubmitHost + " and become public there.",
 						"(" + (gif.Length / 1024) + " KB GIF)");
 					if (DialogDraw.Button("SUBMIT", -290f))
 						StartUpload();
@@ -215,6 +215,11 @@ namespace ZlbbLeaderboard
 					DialogDraw.Lines("Uploading" + new string('.', 1 + ((int)(time * 2f)) % 3), "zlbb checks the solution before it answers; this can take a while.");
 					if (result != null)
 						step = Step.Done;
+					else if (DialogDraw.Button("HIDE", -130f) || DialogDraw.EscapePressed())
+					{
+						ZlbbMod.Log("submission window hidden; the upload carries on in the background");
+						UI.CloseScreen(); // never trap the player in a slow upload; the result is logged when it arrives
+					}
 					break;
 
 				default:

@@ -19,6 +19,14 @@ leaderboard <https://zlbb.faendir.com> inside the game, drawn by the game's own 
   SUBMIT (or turn on automatic submitting in the mod settings). It needs an author name (Mods screen > ZLBB Leaderboard >
   Set author name). The old game build Quintessential runs on lacks the built-in zlbb submission, so this mod provides it.
 
+## Known limits
+- Height / width / bounding hexagon are remembered per solution under its four scores (`solves.txt` in the cache folder), so two
+  different solutions with identical cost, cycles, area and instructions share the last measured geometry.
+- On production puzzles the game's footprint is not comparable with zlbb's area (zlbb counts the walls), so no marker or rank is
+  shown for Area there.
+- A puzzle screen opened during the very first full download (about 10 seconds) stays plain until it is reopened.
+- A wrong PC clock cannot make syncs skip changes: the server's own time is used for the sync time.
+
 ## How it uses the zlbb server
 One full download of the change feed (`/om/records/changes/2000-01-01...`, ~22 MB) on the first launch, then one small
 "changes since last time" request per game start. No polling, no requests while playing. A "Sync with zlbb now" button
@@ -41,7 +49,8 @@ dotnet run --project tools\FakeSubmitServer  # local stand-in for zlbb's submit 
 ```
 To try submitting without touching the real leaderboard, start the fake server and launch the game with the environment
 variable `ZLBB_SUBMIT_URL=http://localhost:5099`. `ZLBB_BASE_URL` redirects the data sync the same way (use it only with a
-server that implements `/om/records/changes/`).
+server that implements `/om/records/changes/`); that run keeps its own cache file (`om-<hash>.snapshot`), so the real cache is
+never touched.
 
 Layout: `src/ZlbbCore` (parsing, sync, snapshot, binning, layout, submit - no game references, fully unit tested),
 `src/ZlbbLeaderboard` (the game hooks and screens), `docs/GAME_HOOKS.md` (which game methods are hooked and why).

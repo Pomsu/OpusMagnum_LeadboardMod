@@ -50,8 +50,9 @@ namespace ZlbbLeaderboard
 							Known[string.Join("|", parts, 0, 5)] = new SolveGeometry { Height = height, Width = width, BoundingHex = bounding };
 					}
 				}
-				catch (IOException e)
+				catch (Exception e) when (!(e is OutOfMemoryException))
 				{
+					// a damaged or locked file must never stop the mod from starting
 					ZlbbMod.Log("could not read solves.txt: " + e.Message);
 				}
 			}

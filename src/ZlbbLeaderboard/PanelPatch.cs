@@ -101,14 +101,16 @@ namespace ZlbbLeaderboard
 				// one of the game's four metrics: native title, native number format, and the player's scores
 				panel.field_1480 = real.Value;
 				panel.field_1481 = "ZLBB." + info.Id + "." + metric.Key;
+				// zlbb counts the walls as area on production puzzles, the game's own number is not comparable: no player marker there
+				bool comparable = !(real.Value == enum_133.Footprint && info.Production);
 				class_132 own;
-				if (info.Vanilla != null && info.Vanilla.TryGetValue(real.Value, out own))
+				if (comparable && info.Vanilla != null && info.Vanilla.TryGetValue(real.Value, out own))
 				{
 					panel.field_1483 = own.field_1483;
 					panel.field_1484 = own.field_1484;
 					panel.field_1485 = own.field_1485;
 				}
-				showsPlayer = true;
+				showsPlayer = comparable;
 			}
 			else
 			{
@@ -171,7 +173,7 @@ namespace ZlbbLeaderboard
 
 			if (metric == Metrics.Cost) return cost;
 			if (metric == Metrics.Cycles) return cycles;
-			if (metric == Metrics.Area) return area;
+			if (metric == Metrics.Area) return info.Production ? null : area; // not comparable on production puzzles (zlbb counts the walls)
 			if (metric == Metrics.Instructions) return instructions;
 			if (metric == Metrics.Sum) return cost.HasValue && cycles.HasValue && area.HasValue ? (double?)((double)cost.Value + cycles.Value + area.Value) : null;
 			if (metric == Metrics.SumProduction) return cost.HasValue && cycles.HasValue && instructions.HasValue ? (double?)((double)cost.Value + cycles.Value + instructions.Value) : null;
@@ -205,6 +207,8 @@ namespace ZlbbLeaderboard
 				first = "YOUR SOLVE: " + FormatValue(value.Value);
 				second = standing.Describe();
 			}
+			else if (metric == Metrics.Area && info.Production)
+				first = "not comparable on production puzzles";
 			else if (metric == Metrics.Height || metric == Metrics.Width || metric == Metrics.BoundingHex)
 				first = "run this solution once to measure it";
 			else

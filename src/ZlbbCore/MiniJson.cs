@@ -277,6 +277,32 @@ namespace ZlbbCore
 			}
 		}
 
+		/// <summary>True for text shaped like a JSON number (optional '-', digits, optional fraction, optional exponent).</summary>
+		private static bool LooksLikeNumber(string text)
+		{
+			int i = 0;
+			if (i < text.Length && text[i] == '-') i++;
+			int digits = 0;
+			while (i < text.Length && text[i] >= '0' && text[i] <= '9') { i++; digits++; }
+			if (digits == 0) return false;
+			if (i < text.Length && text[i] == '.')
+			{
+				i++;
+				int fraction = 0;
+				while (i < text.Length && text[i] >= '0' && text[i] <= '9') { i++; fraction++; }
+				if (fraction == 0) return false;
+			}
+			if (i < text.Length && (text[i] == 'e' || text[i] == 'E'))
+			{
+				i++;
+				if (i < text.Length && (text[i] == '+' || text[i] == '-')) i++;
+				int exponent = 0;
+				while (i < text.Length && text[i] >= '0' && text[i] <= '9') { i++; exponent++; }
+				if (exponent == 0) return false;
+			}
+			return i == text.Length;
+		}
+
 		private double ReadNumber()
 		{
 			var sb = new StringBuilder();
@@ -286,9 +312,17 @@ namespace ZlbbCore
 				sb.Append((char)c);
 				pos++;
 			}
+			string text = sb.ToString();
 			double value;
-			if (sb.Length == 0 || !double.TryParse(sb.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+			if (text.Length == 0 || text.IndexOfAny("0123456789".ToCharArray()) < 0)
 				throw new JsonFormatException("Invalid number");
+			if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+			{
+				// .NET Framework reports "1e999" as unparseable, newer runtimes as infinity; treat both the same (metrics ignore infinite values)
+				if (!LooksLikeNumber(text))
+					throw new JsonFormatException("Invalid number");
+				return text[0] == '-' ? double.NegativeInfinity : double.PositiveInfinity;
+			}
 			return value;
 		}
 	}

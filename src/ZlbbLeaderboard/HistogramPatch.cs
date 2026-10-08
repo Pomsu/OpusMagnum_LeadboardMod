@@ -54,20 +54,26 @@ namespace ZlbbLeaderboard
 		private static void Inject(ScoreManager self, Puzzle puzzle)
 		{
 			SyncService sync = ZlbbMod.Sync;
-			if (sync == null || !ZlbbMod.Enabled || puzzle == null || puzzle.field_2782 || string.IsNullOrEmpty(puzzle.field_2766))
+			if (sync == null || puzzle == null || puzzle.field_2782 || string.IsNullOrEmpty(puzzle.field_2766))
 				return;
 			var strings = ScoreStrings == null ? null : ScoreStrings.GetValue(self) as Dictionary<string, string>;
 			if (strings == null || SaveKey == null)
 				return;
 
 			string puzzleId = puzzle.field_2766;
+			bool enabled = ZlbbMod.Enabled;
 			var summary = new List<string>();
 			foreach (var pair in Mapping)
 			{
+				string key = (string)SaveKey.Invoke(self, new object[] { puzzle, pair.Key });
+				if (!enabled)
+				{
+					strings.Remove(key); // switched off in the settings: take back what was injected earlier
+					continue;
+				}
 				GameHistogram scaled = sync.Index.GetGameHistogram(puzzleId, pair.Value);
 				if (scaled.IsEmpty)
 					continue;
-				string key = (string)SaveKey.Invoke(self, new object[] { puzzle, pair.Key });
 				strings[key] = scaled.ToGameString();
 				summary.Add(pair.Value.Key + " n=" + scaled.Total + " max=" + scaled.Max);
 			}

@@ -159,6 +159,7 @@ namespace ZlbbCore
 				request.Timeout = TimeoutMs;
 				request.ReadWriteTimeout = TimeoutMs;
 				request.AllowWriteStreamBuffering = false;
+				request.ServicePoint.Expect100Continue = false; // some proxies answer 417 to "Expect: 100-continue"
 				using (Stream upload = request.GetRequestStream())
 					upload.Write(bytes, 0, bytes.Length);
 

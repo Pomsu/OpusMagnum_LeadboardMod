@@ -43,9 +43,27 @@ namespace ZlbbLeaderboard
 			Instance = this;
 		}
 
+		/// <summary>Where submissions go (shown in the confirmation window).</summary>
+		public static string SubmitHost { get; private set; }
+
 		public static void Log(string text)
 		{
-			Logger.Log(LogPrefix + text);
+			try
+			{
+				Logger.Log(LogPrefix + text);
+			}
+			catch (Exception)
+			{
+				// logging must never be able to break a hook or a background thread
+			}
+		}
+
+		private static string ShortHash(string text)
+		{
+			uint hash = 2166136261;
+			foreach (char c in text)
+				hash = (hash ^ c) * 16777619;
+			return hash.ToString("x8");
 		}
 
 		public override void Load()
@@ -60,14 +78,21 @@ namespace ZlbbLeaderboard
 				// same folder Quintessential uses for mod settings: Documents\My Games\Opus Magnum\<profile>\ModSettings
 				string directory = Path.Combine(class_161.method_402(), "ModSettings", "ZlbbCache");
 				string baseUrl = Environment.GetEnvironmentVariable("ZLBB_BASE_URL"); // test hook: point the data sync at a fake server
+				bool customBase = !string.IsNullOrEmpty(baseUrl);
+				// a test server must never share (and pollute) the real cache: its snapshot gets its own file
+				string snapshotName = customBase ? "om-" + ShortHash(baseUrl) + ".snapshot" : "om.snapshot";
 				Sync = new SyncService(
-					new ZlbbClient(string.IsNullOrEmpty(baseUrl) ? ZlbbClient.DefaultBaseUrl : baseUrl),
-					Path.Combine(directory, "om.snapshot"),
+					new ZlbbClient(customBase ? baseUrl : ZlbbClient.DefaultBaseUrl),
+					Path.Combine(directory, snapshotName),
 					null,
-					Log);
+					Log) { PreferServerClock = !customBase };
+				if (customBase)
+					Log("data sync goes to " + baseUrl + " instead of zlbb (ZLBB_BASE_URL), using its own cache file");
 
 				string submitUrl = Environment.GetEnvironmentVariable("ZLBB_SUBMIT_URL"); // test hook: point submissions at a local test server
-				Submitter = new ZlbbSubmitter(new ZlbbClient(string.IsNullOrEmpty(submitUrl) ? ZlbbClient.DefaultBaseUrl : submitUrl));
+				string submitBase = string.IsNullOrEmpty(submitUrl) ? ZlbbClient.DefaultBaseUrl : submitUrl;
+				Submitter = new ZlbbSubmitter(new ZlbbClient(submitBase));
+				SubmitHost = new Uri(submitBase).Host;
 				if (!string.IsNullOrEmpty(submitUrl))
 					Log("submissions go to " + submitUrl + " instead of zlbb (ZLBB_SUBMIT_URL)");
 

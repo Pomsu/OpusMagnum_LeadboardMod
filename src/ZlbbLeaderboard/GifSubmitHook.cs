@@ -16,13 +16,27 @@ namespace ZlbbLeaderboard
 
 		private static readonly FieldInfo GifStream = typeof(class_92).GetField("field_922", BindingFlags.Instance | BindingFlags.NonPublic);
 		[ThreadStatic] private static bool cancelling;
+		private static readonly FieldInfo RecorderEditor = typeof(class_250).GetField("field_2022", BindingFlags.Instance | BindingFlags.NonPublic);
 		private static Solution recordedSolution;
 
-		/// <summary>The recorder screen is created with the solution it records.</summary>
+		/// <summary>
+		/// The recorder screen is created with a solution and replays it in its own editor (field_2022); the GIF shows what that editor
+		/// holds, so that is the solution to submit. The constructor argument is the fallback.
+		/// </summary>
 		public static void RecorderCtor(On.class_250.orig_ctor orig, class_250 self, Solution solution)
 		{
 			orig(self, solution);
-			recordedSolution = solution;
+			Solution owned = null;
+			try
+			{
+				var editor = RecorderEditor == null ? null : RecorderEditor.GetValue(self) as SolutionEditorBase;
+				owned = editor == null ? null : editor.method_502();
+			}
+			catch (Exception e)
+			{
+				ZlbbMod.Log("could not read the recorder's solution: " + e.Message);
+			}
+			recordedSolution = owned ?? solution;
 		}
 
 		/// <summary>method_78 finishes the file and then deletes it; that is a cancel, not a recording.</summary>

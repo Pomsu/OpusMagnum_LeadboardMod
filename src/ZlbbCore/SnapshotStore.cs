@@ -41,8 +41,9 @@ namespace ZlbbCore
 				stream.Flush(true);
 			}
 			if (File.Exists(path))
-				File.Delete(path);
-			File.Move(temp, path);
+				File.Replace(temp, path, null); // atomic swap: a crash can never leave the snapshot half there
+			else
+				File.Move(temp, path);
 		}
 
 		public static Snapshot Load(string path)

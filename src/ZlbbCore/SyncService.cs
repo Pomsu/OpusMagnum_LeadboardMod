@@ -56,6 +56,9 @@ namespace ZlbbCore
 		/// <summary>Raised on the sync thread after the index changed.</summary>
 		public event Action Updated;
 
+		/// <summary>Use the server's HTTP Date as the sync time (protects against a wrong PC clock). Tests with a fake clock leave this off.</summary>
+		public bool PreferServerClock;
+
 		public SyncService(ZlbbClient client, string snapshotPath, Func<DateTime> utcNow = null, Action<string> log = null)
 		{
 			this.client = client;
@@ -109,6 +112,13 @@ namespace ZlbbCore
 			{
 				return Sync();
 			}
+			catch (Exception e) when (!(e is OutOfMemoryException))
+			{
+				// anything unexpected: report it instead of leaving the state at "Running" for good
+				state = lastSyncUtc.HasValue ? SyncState.Stale : SyncState.Failed;
+				log("sync failed unexpectedly: " + e.Message);
+				return new SyncOutcome { State = state, Error = e.Message };
+			}
 			finally
 			{
 				lock (runLock)
@@ -149,9 +159,10 @@ namespace ZlbbCore
 			outcome.Bootstrap = bootstrap;
 			DateTime requestStart = utcNow();
 			var changes = new List<RecordChange>();
+			FetchStats fetched;
 			try
 			{
-				client.FetchChanges(since, changes.Add, bootstrap ? BootstrapTimeoutMs : DiffTimeoutMs);
+				fetched = client.FetchChanges(since, changes.Add, bootstrap ? BootstrapTimeoutMs : DiffTimeoutMs);
 			}
 			catch (Exception e) when (!(e is OutOfMemoryException))
 			{
@@ -170,19 +181,25 @@ namespace ZlbbCore
 			index = target;
 			outcome.Changes = changes.Count;
 
+			// The moment "up to date as of": the server's clock when we may trust it (a PC clock that runs fast would otherwise make later
+			// syncs skip changes), else the local time from just before the request. The overlap window covers small differences.
+			DateTime syncTime = PreferServerClock && fetched.ServerTimeUtc.HasValue ? fetched.ServerTimeUtc.Value : requestStart;
+			if (PreferServerClock && fetched.ServerTimeUtc.HasValue && Math.Abs((fetched.ServerTimeUtc.Value - requestStart).TotalMinutes) > Overlap.TotalMinutes)
+				log("this PC's clock differs from zlbb's by " + (int)(requestStart - fetched.ServerTimeUtc.Value).TotalMinutes + " minutes; using zlbb's time for syncing");
+
 			bool saved = true;
 			try
 			{
-				SnapshotStore.Save(snapshotPath, new Snapshot { LastSyncUtc = requestStart, Records = target.GetAllRecords() });
+				SnapshotStore.Save(snapshotPath, new Snapshot { LastSyncUtc = syncTime, Records = target.GetAllRecords() });
 			}
-			catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+			catch (Exception e) when (!(e is OutOfMemoryException))
 			{
 				saved = false;
 				log("could not save snapshot: " + e.Message);
 			}
 			if (saved)
 				lock (runLock)
-					lastSyncUtc = requestStart;
+					lastSyncUtc = syncTime;
 			else if (!haveData)
 				lock (runLock)
 					lastSyncUtc = null; // nothing persisted: the next launch downloads again
