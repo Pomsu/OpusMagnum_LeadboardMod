@@ -27,10 +27,7 @@ namespace ZlbbCore
 			get { return Counts.Length == 0; }
 		}
 
-		/// <summary>
-		/// The string format the game reads for a histogram: "start,count0,count1,...". The game normalises by the
-		/// largest count itself, so raw counts are written. Needs at least one count (the game ignores shorter strings).
-		/// </summary>
+		/// <summary>Plain "start,count0,count1,..." (one count per consecutive integer). NOT what the game reads - see <see cref="ToGameScale"/>.</summary>
 		public string ToGameString()
 		{
 			var sb = new StringBuilder();
@@ -38,6 +35,105 @@ namespace ZlbbCore
 			foreach (int count in Counts)
 				sb.Append(',').Append(count.ToString(CultureInfo.InvariantCulture));
 			return sb.ToString();
+		}
+
+		/// <summary>The maximum number of bars the game's histogram panel can show legibly (258 px panel, 230 px plot).</summary>
+		public const int DefaultMaxBuckets = 115;
+
+		/// <summary>
+		/// Converts to the game's histogram scale. In the game's data the first number is the axis MAXIMUM (labels 0, max/4, max/2,
+		/// 3max/4, max), followed by counts for buckets spread evenly over 0..max; a score v lands in bucket
+		/// clamp((v-1)*buckets/max, 0, buckets-1) - the same integer formula the game uses to place its own markers.
+		/// </summary>
+		public GameHistogram ToGameScale(int maxBuckets = DefaultMaxBuckets)
+		{
+			if (IsEmpty)
+				return new GameHistogram();
+			int last = Start + Counts.Length - 1;
+			int max = Math.Max(last, 1);
+			int buckets = Math.Max(1, Math.Min(max, maxBuckets));
+			var counts = new int[buckets];
+			for (int i = 0; i < Counts.Length; i++)
+			{
+				if (Counts[i] == 0)
+					continue;
+				long value = (long)Start + i;
+				long index = (value - 1) * buckets / max;
+				if (index < 0) index = 0;
+				if (index > buckets - 1) index = buckets - 1;
+				counts[index] += Counts[i];
+			}
+			return new GameHistogram { Max = max, Counts = counts };
+		}
+	}
+
+	/// <summary>Histogram in the game's own format: axis maximum plus counts over equally wide buckets from 0 to <see cref="Max"/>.</summary>
+	public sealed class GameHistogram
+	{
+		public int Max;
+		public int[] Counts = new int[0];
+
+		public bool IsEmpty
+		{
+			get { return Counts.Length == 0 || Max <= 0; }
+		}
+
+		public int Total
+		{
+			get
+			{
+				int total = 0;
+				foreach (int count in Counts)
+					total += count;
+				return total;
+			}
+		}
+
+		/// <summary>"max,count0,count1,..." - the exact string format ScoreManager reads. The game normalises by the largest count.</summary>
+		public string ToGameString()
+		{
+			var sb = new StringBuilder();
+			sb.Append(Max.ToString(CultureInfo.InvariantCulture));
+			foreach (int count in Counts)
+				sb.Append(',').Append(count.ToString(CultureInfo.InvariantCulture));
+			return sb.ToString();
+		}
+	}
+
+	/// <summary>Which metrics go on which page. Page 0 is the game's own trio (Cost, Cycles, Area or Instructions); the rest follow.</summary>
+	public static class MetricPages
+	{
+		public const int PanelsPerPage = 3;
+
+		/// <summary>The three metrics the game shows by itself for a puzzle.</summary>
+		public static Metric[] Vanilla(bool production)
+		{
+			return new[] { Metrics.Cost, Metrics.Cycles, production ? Metrics.Instructions : Metrics.Area };
+		}
+
+		/// <summary>
+		/// The pages after the game's own page: every other metric that has data for this puzzle, in the website's order, three per page.
+		/// Metrics without any data (e.g. height on production puzzles) are left out, so no page is empty.
+		/// </summary>
+		public static List<Metric[]> ExtraPages(bool production, Func<Metric, bool> hasData)
+		{
+			var vanilla = new List<Metric>(Vanilla(production));
+			var pages = new List<Metric[]>();
+			var current = new List<Metric>();
+			foreach (Metric metric in Metrics.All)
+			{
+				if (vanilla.Contains(metric) || !hasData(metric))
+					continue;
+				current.Add(metric);
+				if (current.Count == PanelsPerPage)
+				{
+					pages.Add(current.ToArray());
+					current.Clear();
+				}
+			}
+			if (current.Count > 0)
+				pages.Add(current.ToArray());
+			return pages;
 		}
 	}
 

@@ -37,6 +37,7 @@ namespace ZlbbLeaderboard
 					null,
 					Log);
 				On.ScoreManager.method_1377 += HistogramPatch.Hook;
+				On.class_140.method_321 += PanelPatch.Hook;
 				StartStartupSync();
 			}
 			catch (Exception e)
@@ -48,6 +49,7 @@ namespace ZlbbLeaderboard
 		public override void Unload()
 		{
 			On.ScoreManager.method_1377 -= HistogramPatch.Hook;
+			On.class_140.method_321 -= PanelPatch.Hook;
 		}
 
 		/// <summary>The one and only automatic sync: once per game start, on a background thread.</summary>

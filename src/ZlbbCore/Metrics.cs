@@ -49,6 +49,14 @@ namespace ZlbbCore
 			Cost, Instructions, Cycles, Area, Height, Width, BoundingHex, Rate, AreaInf, HeightInf, WidthInf, BoundingHexInf,
 		}.AsReadOnly();
 
+		public static int IndexOf(Metric metric)
+		{
+			for (int i = 0; i < All.Count; i++)
+				if (All[i] == metric)
+					return i;
+			return -1;
+		}
+
 		public static Metric ByKey(string key)
 		{
 			foreach (Metric metric in All)

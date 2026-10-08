@@ -38,7 +38,17 @@ namespace ZlbbLeaderboard
 				// never break the game over a leaderboard problem: fall back to the vanilla (empty) histograms
 				ZlbbMod.Log("could not inject histograms: " + e.Message);
 			}
-			return orig(self, puzzle, solution);
+			Dictionary<enum_133, class_132> result = orig(self, puzzle, solution);
+			try
+			{
+				if (puzzle != null && !puzzle.field_2782 && !string.IsNullOrEmpty(puzzle.field_2766))
+					PanelPatch.Remember(puzzle.field_2766, puzzle.field_2779.method_1085(), result);
+			}
+			catch (Exception e)
+			{
+				ZlbbMod.Log("could not prepare extra pages: " + e.Message);
+			}
+			return result;
 		}
 
 		private static void Inject(ScoreManager self, Puzzle puzzle)
@@ -58,8 +68,9 @@ namespace ZlbbLeaderboard
 				if (histogram.IsEmpty)
 					continue;
 				string key = (string)SaveKey.Invoke(self, new object[] { puzzle, pair.Key });
-				strings[key] = histogram.ToGameString();
-				summary.Add(pair.Value.Key + " n=" + histogram.Total);
+				GameHistogram scaled = histogram.ToGameScale();
+				strings[key] = scaled.ToGameString();
+				summary.Add(pair.Value.Key + " n=" + scaled.Total + " max=" + scaled.Max);
 			}
 
 			bool firstTime;
