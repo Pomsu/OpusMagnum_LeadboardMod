@@ -157,53 +157,75 @@ namespace ZlbbCore
 				Expect(expected);
 		}
 
+		/// <summary>Real answers are a few levels deep; the limit keeps hostile or broken input from overflowing the stack (which would end the whole game).</summary>
+		public const int MaxDepth = 64;
+		private int depth;
+
 		private Dictionary<string, object> ReadObject()
 		{
-			Expect('{');
-			var result = new Dictionary<string, object>();
-			SkipWhitespace();
-			if (Peek() == '}')
+			if (++depth > MaxDepth)
+				throw new JsonFormatException("Nested too deeply");
+			try
 			{
-				Next();
-				return result;
-			}
-			while (true)
-			{
+				Expect('{');
+				var result = new Dictionary<string, object>();
 				SkipWhitespace();
-				string key = ReadString();
-				SkipWhitespace();
-				Expect(':');
-				result[key] = ReadValue();
-				SkipWhitespace();
-				int c = Next();
-				if (c == ',')
-					continue;
-				if (c == '}')
+				if (Peek() == '}')
+				{
+					Next();
 					return result;
-				throw new JsonFormatException("Expected ',' or '}' in object");
+				}
+				while (true)
+				{
+					SkipWhitespace();
+					string key = ReadString();
+					SkipWhitespace();
+					Expect(':');
+					result[key] = ReadValue();
+					SkipWhitespace();
+					int c = Next();
+					if (c == ',')
+						continue;
+					if (c == '}')
+						return result;
+					throw new JsonFormatException("Expected ',' or '}' in object");
+				}
+			}
+			finally
+			{
+				depth--;
 			}
 		}
 
 		private List<object> ReadList()
 		{
-			Expect('[');
-			var result = new List<object>();
-			SkipWhitespace();
-			if (Peek() == ']')
+			if (++depth > MaxDepth)
+				throw new JsonFormatException("Nested too deeply");
+			try
 			{
-				Next();
-				return result;
-			}
-			while (true)
-			{
-				result.Add(ReadValue());
+				Expect('[');
+				var result = new List<object>();
 				SkipWhitespace();
-				int c = Next();
-				if (c == ',')
-					continue;
-				if (c == ']')
+				if (Peek() == ']')
+				{
+					Next();
 					return result;
-				throw new JsonFormatException("Expected ',' or ']' in array");
+				}
+				while (true)
+				{
+					result.Add(ReadValue());
+					SkipWhitespace();
+					int c = Next();
+					if (c == ',')
+						continue;
+					if (c == ']')
+						return result;
+					throw new JsonFormatException("Expected ',' or ']' in array");
+				}
+			}
+			finally
+			{
+				depth--;
 			}
 		}
 

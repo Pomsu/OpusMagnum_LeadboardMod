@@ -54,7 +54,7 @@ namespace ZlbbLeaderboard
 		private static void Inject(ScoreManager self, Puzzle puzzle)
 		{
 			SyncService sync = ZlbbMod.Sync;
-			if (sync == null || puzzle == null || puzzle.field_2782 || string.IsNullOrEmpty(puzzle.field_2766))
+			if (sync == null || !ZlbbMod.Enabled || puzzle == null || puzzle.field_2782 || string.IsNullOrEmpty(puzzle.field_2766))
 				return;
 			var strings = ScoreStrings == null ? null : ScoreStrings.GetValue(self) as Dictionary<string, string>;
 			if (strings == null || SaveKey == null)

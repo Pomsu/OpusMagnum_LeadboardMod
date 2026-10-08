@@ -58,6 +58,8 @@ namespace ZlbbLeaderboard
 		public static void Hook(On.class_140.orig_method_321 orig, class_132 data, Vector2 position, bool isInfoScreen)
 		{
 			orig(data, position, isInfoScreen); // the game's own panel, unchanged
+			if (!ZlbbMod.Enabled)
+				return;
 			try
 			{
 				int slot = SlotOf(data.field_1480);

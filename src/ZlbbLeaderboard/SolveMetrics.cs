@@ -87,7 +87,7 @@ namespace ZlbbLeaderboard
 		/// <summary>Called when the game shows the "your machine has successfully created the product" screen (class_257 constructor).</summary>
 		public static void CaptureFinishedRun(class_257 finishScreen, SolutionEditorScreen editor)
 		{
-			if (EditorSim == null || FinishHistograms == null)
+			if (EditorSim == null || FinishHistograms == null || !ZlbbMod.Enabled)
 				return;
 			Solution solution = editor.method_502();
 			Puzzle puzzle = solution.method_1934();

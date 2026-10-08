@@ -144,8 +144,6 @@ namespace ZlbbCore
 	/// <summary>Which metrics go on which page. Page 0 is the game's own trio (Cost, Cycles, Area or Instructions); the rest follow.</summary>
 	public static class MetricPages
 	{
-		public const int PanelsPerPage = 3;
-
 		/// <summary>The three metrics the game shows by itself for a puzzle.</summary>
 		public static Metric[] Vanilla(bool production)
 		{

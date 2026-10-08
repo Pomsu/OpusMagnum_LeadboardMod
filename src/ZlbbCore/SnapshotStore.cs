@@ -71,7 +71,9 @@ namespace ZlbbCore
 			}
 			catch (Exception e)
 			{
-				if (e is IOException || e is EndOfStreamException || e is ArgumentException || e is UnauthorizedAccessException || e is InvalidDataException)
+				// anything a damaged file can provoke while being read: treat as "no usable snapshot"
+				if (e is IOException || e is EndOfStreamException || e is ArgumentException || e is UnauthorizedAccessException || e is InvalidDataException
+					|| e is FormatException || e is OverflowException)
 					return null;
 				throw;
 			}
