@@ -80,7 +80,7 @@ namespace ZlbbLeaderboard
 			{
 				float x, y;
 				layout.PanelOrigin(i, out x, out y);
-				PanelPatch.DrawPanel(PanelPatch.BuildPanel(info, info.Metrics[first + i]), pos + new Vector2(x, y));
+				PanelPatch.DrawPanel(info, PanelPatch.BuildPanel(info, info.Metrics[first + i]), pos + new Vector2(x, y));
 			}
 
 			if (pages > 1)

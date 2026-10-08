@@ -150,6 +150,32 @@ namespace ZlbbCore
 			}
 		}
 
+		/// <summary>Where <paramref name="value"/> ranks among the records that have this metric (lower is better); null when the puzzle has no such records.</summary>
+		public Standing GetStanding(string puzzleId, Metric metric, double value, RecordFilter filter = null)
+		{
+			lock (sync)
+			{
+				Dictionary<string, ZlbbRecord> byId;
+				if (!puzzles.TryGetValue(puzzleId, out byId))
+					return null;
+				var standing = new Standing();
+				foreach (ZlbbRecord record in byId.Values)
+				{
+					if (filter != null && !filter.Matches(record))
+						continue;
+					double? other = metric.Get(record);
+					if (!other.HasValue)
+						continue;
+					standing.Total++;
+					if (Math.Abs(other.Value - value) < 1e-9)
+						standing.Equal++;
+					else if (other.Value < value)
+						standing.Better++;
+				}
+				return standing.Total == 0 ? null : standing;
+			}
+		}
+
 		private void Touch(string puzzleId)
 		{
 			int version;
