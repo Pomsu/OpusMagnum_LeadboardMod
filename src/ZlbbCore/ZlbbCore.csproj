@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net452 = what the game loads; netstandard2.0 = what the unit tests (net8) run against -->
+    <TargetFrameworks>net452;netstandard2.0</TargetFrameworks>
+    <AssemblyName>ZlbbCore</AssemblyName>
+    <RootNamespace>ZlbbCore</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net452'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>
