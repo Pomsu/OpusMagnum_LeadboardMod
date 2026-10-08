@@ -42,7 +42,7 @@ namespace ZlbbLeaderboard
 			try
 			{
 				if (puzzle != null && !puzzle.field_2782 && !string.IsNullOrEmpty(puzzle.field_2766))
-					PanelPatch.Remember(puzzle.field_2766, puzzle.field_2779.method_1085(), result);
+					PanelPatch.Remember(puzzle.field_2766, puzzle.field_2767, puzzle.field_2779.method_1085(), result);
 			}
 			catch (Exception e)
 			{
@@ -68,7 +68,7 @@ namespace ZlbbLeaderboard
 				if (histogram.IsEmpty)
 					continue;
 				string key = (string)SaveKey.Invoke(self, new object[] { puzzle, pair.Key });
-				GameHistogram scaled = histogram.ToGameScale();
+				GameHistogram scaled = histogram.ToGameScale(Histogram.DefaultMaxBuckets, Histogram.DefaultKeepFraction);
 				strings[key] = scaled.ToGameString();
 				summary.Add(pair.Value.Key + " n=" + scaled.Total + " max=" + scaled.Max);
 			}
