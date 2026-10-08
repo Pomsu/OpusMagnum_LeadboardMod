@@ -64,11 +64,10 @@ namespace ZlbbLeaderboard
 			var summary = new List<string>();
 			foreach (var pair in Mapping)
 			{
-				Histogram histogram = sync.Index.GetHistogram(puzzleId, pair.Value);
-				if (histogram.IsEmpty)
+				GameHistogram scaled = sync.Index.GetGameHistogram(puzzleId, pair.Value);
+				if (scaled.IsEmpty)
 					continue;
 				string key = (string)SaveKey.Invoke(self, new object[] { puzzle, pair.Key });
-				GameHistogram scaled = histogram.ToGameScale(Histogram.DefaultMaxBuckets, Histogram.DefaultKeepFraction);
 				strings[key] = scaled.ToGameString();
 				summary.Add(pair.Value.Key + " n=" + scaled.Total + " max=" + scaled.Max);
 			}

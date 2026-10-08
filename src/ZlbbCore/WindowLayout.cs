@@ -53,7 +53,7 @@ namespace ZlbbCore
 		public const float FrameBottom = 88f;
 		public const float FrameWidth = 156f;
 		public const float FrameHeight = 154f;
-		public const int MaxColumns = 6;
+		public const int MaxColumns = 9;
 		/// <summary>Space kept free around the window.</summary>
 		public const float ScreenMargin = 20f;
 
@@ -74,9 +74,14 @@ namespace ZlbbCore
 				var candidate = new WindowLayout { Columns = columns, Rows = rows, PanelCount = panelCount, Fits = true };
 				candidate.WindowWidth = width;
 				candidate.WindowHeight = Height(rows);
-				// show as many panels per page as possible (empty slots do not count); on a tie prefer fewer rows, i.e. the wider grid
+				// show as many panels per page as possible (empty slots do not count); then fewer rows; then fewer empty slots
 				int shown = Math.Min(candidate.PanelsPerPage, panelCount);
-				if (best == null || shown > Math.Min(best.PanelsPerPage, panelCount) || (shown == Math.Min(best.PanelsPerPage, panelCount) && candidate.Rows < best.Rows))
+				int bestShown = best == null ? -1 : Math.Min(best.PanelsPerPage, panelCount);
+				bool better = best == null
+					|| shown > bestShown
+					|| (shown == bestShown && candidate.Rows < best.Rows)
+					|| (shown == bestShown && candidate.Rows == best.Rows && candidate.PanelsPerPage < best.PanelsPerPage);
+				if (better)
 					best = candidate;
 			}
 			if (best != null)

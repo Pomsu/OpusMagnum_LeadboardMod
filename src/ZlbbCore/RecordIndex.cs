@@ -15,6 +15,13 @@ namespace ZlbbCore
 			public Histogram Histogram;
 		}
 
+		private sealed class CachedGameHistogram
+		{
+			public int Version;
+			public GameHistogram Histogram;
+		}
+
+		private readonly Dictionary<string, CachedGameHistogram> gameHistograms = new Dictionary<string, CachedGameHistogram>();
 		private readonly object sync = new object();
 		private readonly Dictionary<string, Dictionary<string, ZlbbRecord>> puzzles = new Dictionary<string, Dictionary<string, ZlbbRecord>>();
 		private readonly Dictionary<string, int> versions = new Dictionary<string, int>();
@@ -114,6 +121,31 @@ namespace ZlbbCore
 
 				Histogram built = Binning.Build(byId.Values, metric, filter, maxBins);
 				histograms[key] = new CachedHistogram { Version = version, Histogram = built };
+				return built;
+			}
+		}
+
+		/// <summary>
+		/// The histogram in the game's own scale (best <paramref name="keepFraction"/> of the records, fixed bar width), built straight from
+		/// the scores. Memoised until that puzzle's records change; the very same instance is returned meanwhile. Empty when the puzzle is unknown.
+		/// </summary>
+		public GameHistogram GetGameHistogram(string puzzleId, Metric metric, RecordFilter filter = null, int maxBuckets = Histogram.DefaultMaxBuckets, double keepFraction = Histogram.DefaultKeepFraction)
+		{
+			lock (sync)
+			{
+				Dictionary<string, ZlbbRecord> byId;
+				if (!puzzles.TryGetValue(puzzleId, out byId))
+					return new GameHistogram();
+
+				string key = puzzleId + "|" + metric.Key + "|" + (filter == null ? "-" : filter.Overlap + "/" + filter.Trackless) + "|" + maxBuckets + "|" + keepFraction;
+				int version;
+				versions.TryGetValue(puzzleId, out version);
+				CachedGameHistogram cached;
+				if (gameHistograms.TryGetValue(key, out cached) && cached.Version == version)
+					return cached.Histogram;
+
+				GameHistogram built = GameScale.Build(Binning.SortedValues(byId.Values, metric, filter), maxBuckets, keepFraction);
+				gameHistograms[key] = new CachedGameHistogram { Version = version, Histogram = built };
 				return built;
 			}
 		}

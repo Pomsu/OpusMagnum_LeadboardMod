@@ -73,26 +73,11 @@ namespace ZlbbCore
 		{
 			if (IsEmpty)
 				return new GameHistogram();
-			int last = Start + Counts.Length - 1;
-			int top = Math.Max(1, keepFraction < 1.0 ? Math.Min(ValueAtFraction(keepFraction), last) : last);
-			top = RoundUpToNiceMaximum(top);
-			int width = NiceBarWidth((top + maxBuckets - 1) / maxBuckets);
-			int max = (int)Math.Min(int.MaxValue / 2, ((long)top + 4L * width - 1) / (4L * width) * (4L * width)); // divisible by 4 bars and by the bar width
-			int buckets = max / width;
-			var counts = new int[buckets];
+			var values = new List<int>(Total);
 			for (int i = 0; i < Counts.Length; i++)
-			{
-				if (Counts[i] == 0)
-					continue;
-				long value = (long)Start + i;
-				if (value > max)
-					continue; // beyond the shown window: the worst scores are intentionally left out
-				long index = (value - 1) * buckets / max;
-				if (index < 0) index = 0;
-				if (index > buckets - 1) index = buckets - 1;
-				counts[index] += Counts[i];
-			}
-			return new GameHistogram { Max = max, BarWidth = width, Counts = counts };
+				for (int c = 0; c < Counts[i]; c++)
+					values.Add(Start + i);
+			return GameScale.Build(values, maxBuckets, keepFraction);
 		}
 
 		/// <summary>Rounds up so the axis labels (max/4, max/2, 3max/4) come out as whole, tidy numbers: 12, 24, 160, 1200, ...</summary>
@@ -168,13 +153,20 @@ namespace ZlbbCore
 		}
 
 		/// <summary>
-		/// All metrics that have data for this puzzle, in display order: the game's own three first (Cost, Cycles, Area or Instructions),
-		/// then the rest in the website's order. Metrics without data (e.g. height on production puzzles) are left out.
+		/// All metrics that have data for this puzzle, in display order: the Sum always comes first (it is the community's most important
+		/// number), then the game's own three (Cost, Cycles, Area or Instructions), then the rest in the website's order. Metrics without
+		/// data (e.g. height on production puzzles) are left out.
 		/// </summary>
 		public static List<Metric> DisplayOrder(bool production, Func<Metric, bool> hasData)
 		{
 			var order = new List<Metric>();
+			Metric sum = Metrics.SumFor(production);
+			if (hasData(sum))
+				order.Add(sum);
 			foreach (Metric metric in Vanilla(production))
+				if (hasData(metric))
+					order.Add(metric);
+			foreach (Metric metric in Metrics.DerivedAfterSum(production))
 				if (hasData(metric))
 					order.Add(metric);
 			foreach (Metric metric in Metrics.All)
@@ -184,8 +176,61 @@ namespace ZlbbCore
 		}
 	}
 
+	/// <summary>Builds the game's histogram scale straight from the sorted scores, so even huge values (products, sums) lose nothing.</summary>
+	public static class GameScale
+	{
+		/// <param name="sortedValues">Ascending scores (lower is better).</param>
+		/// <param name="keepFraction">Share of the records, counted from the best, that the axis covers; the rest is cut off.</param>
+		public static GameHistogram Build(IList<int> sortedValues, int maxBuckets = Histogram.DefaultMaxBuckets, double keepFraction = 1.0)
+		{
+			int n = sortedValues.Count;
+			if (n == 0)
+				return new GameHistogram();
+			int last = sortedValues[n - 1];
+			int cut = last;
+			if (keepFraction < 1.0)
+			{
+				long target = (long)Math.Ceiling(Math.Max(0.0, keepFraction) * n);
+				int index = (int)Math.Max(0, Math.Min(n - 1, target - 1));
+				cut = Math.Min(sortedValues[index], last);
+			}
+			int top = Histogram.RoundUpToNiceMaximum(Math.Max(1, cut));
+			int width = Histogram.NiceBarWidth((int)(((long)top + maxBuckets - 1) / maxBuckets));
+			int max = (int)Math.Min(int.MaxValue / 2, ((long)top + 4L * width - 1) / (4L * width) * (4L * width)); // divisible by 4 bars and by the bar width
+			int buckets = max / width;
+			var counts = new int[buckets];
+			foreach (int value in sortedValues)
+			{
+				if (value > max)
+					break; // beyond the shown window: the worst scores are intentionally left out
+				long index = ((long)value - 1) * buckets / max;
+				if (index < 0) index = 0;
+				if (index > buckets - 1) index = buckets - 1;
+				counts[index]++;
+			}
+			return new GameHistogram { Max = max, BarWidth = width, Counts = counts };
+		}
+	}
+
 	public static class Binning
 	{
+		/// <summary>The metric's scores, rounded to whole numbers and sorted ascending; records without the metric are skipped.</summary>
+		public static List<int> SortedValues(IEnumerable<ZlbbRecord> records, Metric metric, RecordFilter filter = null)
+		{
+			var values = new List<int>();
+			foreach (ZlbbRecord record in records)
+			{
+				if (filter != null && !filter.Matches(record))
+					continue;
+				double? value = metric.Get(record);
+				if (!value.HasValue || Math.Abs(value.Value) > int.MaxValue / 2)
+					continue;
+				values.Add((int)Math.Round(value.Value, MidpointRounding.AwayFromZero));
+			}
+			values.Sort();
+			return values;
+		}
+
 		/// <summary>Hard safety cap so one absurd value can never allocate a gigantic array.</summary>
 		public const int HardMaxBins = 5000;
 

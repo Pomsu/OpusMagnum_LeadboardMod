@@ -34,11 +34,10 @@ namespace ZlbbLeaderboard
 	/// </summary>
 	internal static class PanelPatch
 	{
-		/// <summary>Metrics beyond the game's four use enum values from here on, so the game draws them without a title (we add it).</summary>
+		/// <summary>Metrics beyond the game's four use this enum value, so the game draws them without a title and with plain numbers (we add the title).</summary>
 		private const int ExtraEnumBase = 100;
 
 		private static readonly Dictionary<string, PuzzleInfo> Puzzles = new Dictionary<string, PuzzleInfo>();
-		private static readonly ConditionalWeakTable<Histogram, GameHistogram> GameScaleCache = new ConditionalWeakTable<Histogram, GameHistogram>();
 		private static readonly ConditionalWeakTable<GameHistogram, class_182> ScoreDataCache = new ConditionalWeakTable<GameHistogram, class_182>();
 		private static bool failureLogged;
 
@@ -49,7 +48,7 @@ namespace ZlbbLeaderboard
 			if (sync == null)
 				return;
 			var info = new PuzzleInfo { Id = puzzleId, Name = puzzleName, Production = production, Vanilla = vanilla };
-			info.Metrics = MetricPages.DisplayOrder(production, metric => !sync.Index.GetHistogram(puzzleId, metric).IsEmpty);
+			info.Metrics = MetricPages.DisplayOrder(production, metric => !sync.Index.GetGameHistogram(puzzleId, metric).IsEmpty);
 			lock (Puzzles)
 				Puzzles[puzzleId] = info;
 		}
@@ -84,6 +83,7 @@ namespace ZlbbLeaderboard
 		{
 			var panel = new class_132();
 			string title = null;
+			bool derived = false;
 			enum_133? real = RealEnumOf(metric);
 			if (real.HasValue)
 			{
@@ -100,15 +100,59 @@ namespace ZlbbLeaderboard
 			}
 			else
 			{
-				panel.field_1480 = (enum_133)(ExtraEnumBase + Math.Max(0, Metrics.IndexOf(metric)));
+				panel.field_1480 = (enum_133)ExtraEnumBase;
 				panel.field_1481 = "ZLBB." + info.Id + "." + metric.Key;
 				title = metric.Name;
+				enum_133[] parts;
+				bool product;
+				if (derived = DerivedParts(metric, out parts, out product))
+				{
+					// sums and products of the game's four scores: the player's own marker is computed from them
+					panel.field_1484 = Combine(info, parts, product, c => c.field_1484);
+					panel.field_1485 = Combine(info, parts, product, c => c.field_1485);
+				}
 			}
 
-			class_182 scoreData = ScoreDataFor(ZlbbMod.Sync.Index.GetHistogram(info.Id, metric));
+			class_182 scoreData = ScoreDataFor(ZlbbMod.Sync.Index.GetGameHistogram(info.Id, metric));
 			if (scoreData != null)
 				panel.field_1482 = scoreData;
-			return new PanelSpec { Panel = panel, Title = title, IsInfoScreen = real.HasValue };
+			return new PanelSpec { Panel = panel, Title = title, IsInfoScreen = real.HasValue || derived };
+		}
+
+		/// <summary>Which of the game's four scores a derived metric is built from, and whether they are added or multiplied.</summary>
+		private static bool DerivedParts(Metric metric, out enum_133[] parts, out bool product)
+		{
+			product = false;
+			parts = null;
+			if (metric == Metrics.Sum) parts = new[] { enum_133.Cost, enum_133.Cycles, enum_133.Footprint };
+			else if (metric == Metrics.SumProduction) parts = new[] { enum_133.Cost, enum_133.Cycles, enum_133.Instructions };
+			else if (metric == Metrics.Sum4) parts = new[] { enum_133.Cost, enum_133.Cycles, enum_133.Footprint, enum_133.Instructions };
+			else
+			{
+				product = true;
+				if (metric == Metrics.CostTimesCycles) parts = new[] { enum_133.Cost, enum_133.Cycles };
+				else if (metric == Metrics.CostTimesArea) parts = new[] { enum_133.Cost, enum_133.Footprint };
+				else if (metric == Metrics.CyclesTimesArea) parts = new[] { enum_133.Cycles, enum_133.Footprint };
+				else if (metric == Metrics.CostTimesInstructions) parts = new[] { enum_133.Cost, enum_133.Instructions };
+				else if (metric == Metrics.CyclesTimesInstructions) parts = new[] { enum_133.Cycles, enum_133.Instructions };
+			}
+			return parts != null;
+		}
+
+		private static Maybe<int> Combine(PuzzleInfo info, enum_133[] parts, bool product, Func<class_132, Maybe<int>> pick)
+		{
+			long total = product ? 1 : 0;
+			foreach (enum_133 part in parts)
+			{
+				class_132 source;
+				if (info.Vanilla == null || !info.Vanilla.TryGetValue(part, out source))
+					return struct_18.field_1431;
+				Maybe<int> value = pick(source);
+				if (!value.method_1085())
+					return struct_18.field_1431;
+				total = product ? total * value.method_1087() : total + value.method_1087();
+			}
+			return (int)Math.Min(total, int.MaxValue);
 		}
 
 		public static void DrawPanel(PanelSpec spec, Vector2 position)
@@ -122,12 +166,9 @@ namespace ZlbbLeaderboard
 			}
 		}
 
-		private static class_182 ScoreDataFor(Histogram histogram)
+		private static class_182 ScoreDataFor(GameHistogram scaled)
 		{
-			if (histogram == null || histogram.IsEmpty)
-				return null;
-			GameHistogram scaled = GameScaleCache.GetValue(histogram, h => h.ToGameScale(Histogram.DefaultMaxBuckets, Histogram.DefaultKeepFraction));
-			if (scaled.IsEmpty)
+			if (scaled == null || scaled.IsEmpty)
 				return null;
 			return ScoreDataCache.GetValue(scaled, g =>
 			{

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Xunit;
 
@@ -63,6 +64,28 @@ namespace ZlbbCore.Tests
 				string want = (string)expected[metric.Key];
 				Histogram h = Binning.Build(records, metric, filter);
 				Assert.True(want == h.ToGameString(), "metric " + metric.Key + " (no trackless): expected [" + want + "] but was [" + h.ToGameString() + "]");
+			}
+		}
+
+		[Fact]
+		public void Derived_sums_and_products_match_the_independently_computed_histograms()
+		{
+			var records = LoadRecords();
+			var expected = MiniJson.AsObject(MiniJson.Get(LoadGolden(), "derived"));
+			var metrics = new Dictionary<string, Metric>
+			{
+				{ "sum", Metrics.Sum }, { "sumP", Metrics.SumProduction }, { "sum4", Metrics.Sum4 },
+				{ "gc", Metrics.CostTimesCycles }, { "ga", Metrics.CostTimesArea }, { "ca", Metrics.CyclesTimesArea },
+				{ "gi", Metrics.CostTimesInstructions }, { "ci", Metrics.CyclesTimesInstructions },
+			};
+			Assert.Equal(metrics.Count, expected.Count);
+			foreach (var pair in metrics)
+			{
+				int[] want = ((string)expected[pair.Key]).Split(',').Select(int.Parse).ToArray();
+				int[] got = Binning.SortedValues(records, pair.Value).ToArray();
+				Assert.Equal(want.Length, got.Length);
+				int firstDifference = Enumerable.Range(0, want.Length).FirstOrDefault(i => want[i] != got[i], -1);
+				Assert.True(firstDifference < 0, "derived " + pair.Key + " differs first at sorted index " + firstDifference);
 			}
 		}
 

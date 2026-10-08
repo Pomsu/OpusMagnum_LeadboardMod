@@ -44,5 +44,23 @@ foreach ($variant in 'all', 'trackless') {
         if ($variant -eq 'all') { $golden.metrics[$key] = $text } else { $golden.trackless[$key] = $text }
     }
 }
+# derived metrics (zlbb's Sum / Sum4 / product categories), computed straight from the raw score fields
+$derivedDefs = [ordered]@{
+    sum  = { param($s) $s.cost + $s.cycles + $s.area }
+    sumP = { param($s) $s.cost + $s.cycles + $s.instructions }
+    sum4 = { param($s) $s.cost + $s.cycles + $s.area + $s.instructions }
+    gc   = { param($s) [double]$s.cost * $s.cycles }
+    ga   = { param($s) [double]$s.cost * $s.area }
+    ca   = { param($s) [double]$s.cycles * $s.area }
+    gi   = { param($s) [double]$s.cost * $s.instructions }
+    ci   = { param($s) [double]$s.cycles * $s.instructions }
+}
+$golden.derived = [ordered]@{}   # sorted list of the rounded scores (products reach the millions, so no per-integer bins)
+foreach ($key in $derivedDefs.Keys) {
+    $values = @()
+    foreach ($rec in $records) { $values += [int][math]::Round([double](& $derivedDefs[$key] $rec.score), [MidpointRounding]::AwayFromZero) }
+    $golden.derived[$key] = (($values | Sort-Object) -join ',')
+}
+
 $golden | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $fix "${PuzzleId}_golden.json") -Encoding UTF8
 "records=$(@($records).Count)"; $golden.metrics.GetEnumerator() | ForEach-Object { "{0,-3} {1}" -f $_.Key, ($(if ($_.Value.Length -gt 70) { $_.Value.Substring(0, 70) + '...' } else { $_.Value })) }

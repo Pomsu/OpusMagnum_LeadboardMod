@@ -19,29 +19,36 @@ namespace ZlbbCore.Tests
 		}
 
 		[Fact]
-		public void The_games_own_panels_come_first_then_the_rest_in_the_websites_order()
+		public void The_sum_is_always_first_then_the_games_own_panels_then_derived_then_the_rest()
 		{
-			Assert.Equal("g,c,a,i,h,w,b,r,aI,hI,wI,bI", Keys(MetricPages.DisplayOrder(false, m => true)));
-			Assert.Equal("g,c,i,a,h,w,b,r,aI,hI,wI,bI", Keys(MetricPages.DisplayOrder(true, m => true)));
+			Assert.Equal("sum,g,c,a,sum4,gc,ga,ca,i,h,w,b,r,aI,hI,wI,bI", Keys(MetricPages.DisplayOrder(false, m => true)));
+			Assert.Equal("sumP,g,c,i,gc,gi,ci,a,h,w,b,r,aI,hI,wI,bI", Keys(MetricPages.DisplayOrder(true, m => true)));
+		}
+
+		[Fact]
+		public void The_sum_stays_first_whatever_else_is_missing()
+		{
+			var onlySumAndCost = MetricPages.DisplayOrder(false, m => m == Metrics.Sum || m == Metrics.Cost || m == Metrics.Rate);
+			Assert.Equal("sum,g,r", Keys(onlySumAndCost));
 		}
 
 		[Fact]
 		public void Metrics_without_data_are_left_out()
 		{
 			var noGeometry = new HashSet<string> { "h", "w", "b", "hI", "wI", "bI" };
-			Assert.Equal("g,c,i,a,r,aI", Keys(MetricPages.DisplayOrder(true, m => !noGeometry.Contains(m.Key))));
+			Assert.Equal("sumP,g,c,i,gc,gi,ci,a,r,aI", Keys(MetricPages.DisplayOrder(true, m => !noGeometry.Contains(m.Key))));
 			Assert.Empty(MetricPages.DisplayOrder(false, m => false));
 		}
 
 		[Fact]
 		public void Every_metric_appears_exactly_once()
 		{
-			foreach (bool production in new[] { false, true })
-			{
-				var all = MetricPages.DisplayOrder(production, m => true);
-				Assert.Equal(12, all.Count);
-				Assert.Equal(12, all.Distinct().Count());
-			}
+			var normal = MetricPages.DisplayOrder(false, m => true);
+			Assert.Equal(17, normal.Count);
+			Assert.Equal(17, normal.Distinct().Count());
+			var production = MetricPages.DisplayOrder(true, m => true);
+			Assert.Equal(16, production.Count);
+			Assert.Equal(16, production.Distinct().Count());
 		}
 	}
 
@@ -67,6 +74,26 @@ namespace ZlbbCore.Tests
 			WindowLayout layout = WindowLayouts.Choose(12, 3440, 1440);
 			Assert.Equal(6, layout.Columns);
 			Assert.Equal(2, layout.Rows);
+		}
+
+		[Fact]
+		public void All_seventeen_panels_fit_on_one_page_of_a_very_wide_screen()
+		{
+			WindowLayout layout = WindowLayouts.Choose(17, 3440, 1440);
+			Assert.True(layout.Fits);
+			Assert.Equal(1, layout.Pages);
+			Assert.Equal(9, layout.Columns);
+			Assert.Equal(2, layout.Rows);
+			Assert.True(layout.WindowWidth <= 3440 - WindowLayouts.ScreenMargin);
+		}
+
+		[Fact]
+		public void On_a_full_hd_screen_seventeen_panels_take_two_pages()
+		{
+			WindowLayout layout = WindowLayouts.Choose(17, 1920, 1080);
+			Assert.True(layout.Fits);
+			Assert.Equal(2, layout.Pages);
+			Assert.True(layout.WindowWidth <= 1920 - WindowLayouts.ScreenMargin);
 		}
 
 		[Fact]
