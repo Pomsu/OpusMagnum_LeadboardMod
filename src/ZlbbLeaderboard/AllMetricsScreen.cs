@@ -87,6 +87,8 @@ namespace ZlbbLeaderboard
 				PanelPatch.DrawPanel(info, PanelPatch.BuildPanel(info, info.Metrics[first + i]), pos + new Vector2(x, y));
 			}
 
+			PanelPatch.DrawPendingTooltip(); // after every panel, so nothing covers it
+
 			if (pages > 1)
 			{
 				Vector2 buttonRow = pos + new Vector2(WindowLayouts.FrameLeft + WindowLayouts.Padding, headerY - 6f);

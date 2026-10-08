@@ -120,6 +120,74 @@ namespace ZlbbLeaderboard
 		}
 	}
 
+	/// <summary>Asks a yes/no question before something that costs a download.</summary>
+	internal sealed class ConfirmScreen : IScreen
+	{
+		private readonly string title;
+		private readonly string[] lines;
+		private readonly string yesLabel;
+		private readonly Action onYes;
+
+		public ConfirmScreen(string title, string[] lines, string yesLabel, Action onYes)
+		{
+			this.title = title;
+			this.lines = lines;
+			this.yesLabel = yesLabel;
+			this.onYes = onYes;
+		}
+
+		public bool method_1037() { return false; }
+		public void method_47(bool param_4687) { GameLogic.field_2434.field_2464 = true; }
+		public void method_48() { }
+
+		public void method_50(float delta)
+		{
+			DialogDraw.Title(title);
+			DialogDraw.Lines(lines);
+			if (DialogDraw.Button(yesLabel, -290f))
+			{
+				UI.CloseScreen();
+				onYes();
+			}
+			else if (DialogDraw.Button("CANCEL", 30f) || DialogDraw.EscapePressed())
+				UI.CloseScreen();
+		}
+	}
+
+	/// <summary>What is stored locally and how old it is (no request is made).</summary>
+	internal sealed class DataStatusScreen : IScreen
+	{
+		public bool method_1037() { return false; }
+		public void method_47(bool param_4687) { GameLogic.field_2434.field_2464 = true; }
+		public void method_48() { }
+
+		public void method_50(float delta)
+		{
+			SyncService sync = ZlbbMod.Sync;
+			DialogDraw.Title("zlbb leaderboard data");
+			if (sync == null)
+				DialogDraw.Lines("The mod did not start, so there is no data.");
+			else
+			{
+				DateTime? last = sync.LastSyncUtc;
+				string age = last.HasValue ? "last synced " + last.Value.ToLocalTime().ToString("g") : "never synced";
+				string state;
+				switch (sync.State)
+				{
+					case SyncState.Running: state = "syncing right now"; break;
+					case SyncState.Fresh: state = "up to date as of this start"; break;
+					case SyncState.Stale: state = "could not reach zlbb at the last attempt; using the saved copy"; break;
+					case SyncState.Failed: state = "could not reach zlbb and nothing is saved yet"; break;
+					default: state = "not started"; break;
+				}
+				DialogDraw.Lines(sync.Index.Count + " records for " + sync.Index.PuzzleCount + " puzzles", age, state,
+					"It refreshes once when the game starts (and with the Sync button).");
+			}
+			if (DialogDraw.Button("OK", -130f) || DialogDraw.EscapePressed())
+				UI.CloseScreen();
+		}
+	}
+
 	/// <summary>Result of the "Sync with zlbb now" button.</summary>
 	internal sealed class SyncStatusScreen : IScreen
 	{
@@ -150,7 +218,7 @@ namespace ZlbbLeaderboard
 				DialogDraw.Lines("Not synced: " + result.Skipped + ".");
 			else if (result.State == SyncState.Fresh && sync != null)
 				DialogDraw.Lines("Up to date: " + sync.Index.Count + " records for " + sync.Index.PuzzleCount + " puzzles.",
-					result.Changes + (result.Changes == 1 ? " change" : " changes") + " since the last sync.");
+					result.Bootstrap ? "Everything was downloaded again." : result.Changes + (result.Changes == 1 ? " change" : " changes") + " since the last sync.");
 			else
 				DialogDraw.Lines("Could not reach zlbb" + (result.Error == null ? "." : ": " + result.Error),
 					sync != null && sync.Index.Count > 0 ? "Using the saved copy (" + sync.Index.Count + " records)." : "No leaderboard data available yet.");

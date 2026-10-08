@@ -11,6 +11,9 @@ leaderboard <https://zlbb.faendir.com> inside the game, drawn by the game's own 
 - **All metrics at once.** An "ALL N METRICS" button opens a big window with up to 17 panels: **Sum** (always first),
   the game's own three, Sum4, the cost/cycles/area products, instructions, height, width, bounding hexagon, rate and the
   "@infinity" variants. Metrics a puzzle has no data for are left out.
+- **Targets and tooltips.** Under every panel: the best scores on zlbb and the scores that reach the top 10% / 25%; the first
+  panel also tells you whether any record beats your solve on cost, cycles and area (instructions) together. Pointing at a
+  bar shows its score range and how many records it holds.
 - **Your solve measured.** Sum, Sum4 and the products are calculated from your scores. Height, width and bounding
   hexagon are measured from the machine's footprint when you run a solution to the end (zlbb's published definitions;
   not yet verified against zlbb's own numbers). Rate and the "@infinity" metrics need a steady-state simulation the game
@@ -29,8 +32,10 @@ leaderboard <https://zlbb.faendir.com> inside the game, drawn by the game's own 
 
 ## How it uses the zlbb server
 One full download of the change feed (`/om/records/changes/2000-01-01...`, ~22 MB) on the first launch, then one small
-"changes since last time" request per game start. No polling, no requests while playing. A "Sync with zlbb now" button
-(60 s cooldown) is the only other request. The data is kept in
+"changes since last time" request per game start. No polling, no requests while playing. The "Sync with zlbb now" and
+"Re-download zlbb data" buttons (60 s cooldown, the latter asks first) are the only other requests. The very first start
+shows "downloading zlbb data (first start only)" on the puzzle screens while the full download runs; "zlbb data status" in the
+mod settings shows what is stored and how old it is. The data is kept in
 `Documents\My Games\Opus Magnum\<profile>\ModSettings\ZlbbCache\`.
 
 ## Requirements

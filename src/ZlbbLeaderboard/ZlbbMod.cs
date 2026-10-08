@@ -169,6 +169,46 @@ namespace ZlbbLeaderboard
 			UI.OpenScreen(new SyncStatusScreen(() => lastManualOutcome));
 		}
 
+		/// <summary>"zlbb data status": what is stored, how old it is. Makes no request.</summary>
+		public static void ShowDataStatus()
+		{
+			UI.OpenScreen(new DataStatusScreen());
+		}
+
+		/// <summary>"Re-download zlbb data": asks first, because it fetches the whole ~22 MB history again.</summary>
+		public static void AskRedownload()
+		{
+			UI.OpenScreen(new ConfirmScreen(
+				"Re-download zlbb data?",
+				new[]
+				{
+					"This fetches the whole leaderboard history again (about 22 MB) and replaces the saved copy.",
+					"The old data stays in use if the download fails.",
+				},
+				"RE-DOWNLOAD",
+				StartRedownload));
+		}
+
+		private static void StartRedownload()
+		{
+			lastManualOutcome = null;
+			var thread = new Thread(() =>
+			{
+				try
+				{
+					lastManualOutcome = Sync == null ? new SyncOutcome { State = SyncState.Failed, Error = "the mod did not start" } : Sync.RedownloadAll();
+				}
+				catch (Exception e)
+				{
+					lastManualOutcome = new SyncOutcome { State = SyncState.Failed, Error = e.Message };
+				}
+			});
+			thread.IsBackground = true;
+			thread.Name = "ZlbbLeaderboard re-download";
+			thread.Start();
+			UI.OpenScreen(new SyncStatusScreen(() => lastManualOutcome));
+		}
+
 		/// <summary>Saves the settings file after a change made outside the Mods screen (the author name). Uses Quintessential's own (internal) saver.</summary>
 		public static void SaveConfig()
 		{

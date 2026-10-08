@@ -130,6 +130,22 @@ namespace ZlbbCore
 			}
 		}
 
+		/// <summary>The scores bar <paramref name="index"/> covers (the first bar also takes everything at or below zero).</summary>
+		public void BarRange(int index, out int from, out int to)
+		{
+			from = index <= 0 ? 0 : index * BarWidth + 1;
+			to = (index + 1) * BarWidth;
+		}
+
+		/// <summary>Index of the bar a score falls into, the same way the game places its own markers; -1 when it lies beyond the shown range.</summary>
+		public int BarOf(double score)
+		{
+			if (Counts.Length == 0 || score > Max)
+				return -1;
+			long index = ((long)Math.Round(score) - 1) * Counts.Length / Max;
+			return (int)Math.Max(0, Math.Min(Counts.Length - 1, index));
+		}
+
 		/// <summary>"max,count0,count1,..." - the exact string format ScoreManager reads. The game normalises by the largest count.</summary>
 		public string ToGameString()
 		{

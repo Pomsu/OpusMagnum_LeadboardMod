@@ -84,16 +84,27 @@ namespace ZlbbCore
 
 		public SyncOutcome RunOnce()
 		{
-			return Run(false);
+			return Run(false, false);
 		}
 
 		/// <summary>User-triggered sync ("Sync now" button); refused while another sync runs or within the cooldown.</summary>
 		public SyncOutcome SyncNow()
 		{
-			return Run(true);
+			return Run(true, false);
 		}
 
-		private SyncOutcome Run(bool manual)
+		/// <summary>
+		/// Downloads the whole history again and replaces the local copy ("Re-download all zlbb data"). The old data stays in use until
+		/// the new download has succeeded, so a failed attempt (offline) loses nothing. Same cooldown as <see cref="SyncNow"/>.
+		/// </summary>
+		public SyncOutcome RedownloadAll()
+		{
+			return Run(true, true);
+		}
+
+		private bool forceBootstrap;
+
+		private SyncOutcome Run(bool manual, bool redownload)
 		{
 			lock (runLock)
 			{
@@ -106,6 +117,7 @@ namespace ZlbbCore
 				}
 				if (manual)
 					lastManualAttemptUtc = utcNow();
+				forceBootstrap = redownload;
 				running = true;
 			}
 			try
@@ -154,8 +166,9 @@ namespace ZlbbCore
 				}
 			}
 
-			DateTime since = haveData ? lastSyncUtc.Value - Overlap : BootstrapSince;
-			bool bootstrap = !haveData;
+			// a full re-download asks for the whole history even though we have data, and builds a fresh index (the old one stays until it works)
+			bool bootstrap = !haveData || forceBootstrap;
+			DateTime since = bootstrap ? BootstrapSince : lastSyncUtc.Value - Overlap;
 			outcome.Bootstrap = bootstrap;
 			DateTime requestStart = utcNow();
 			var changes = new List<RecordChange>();

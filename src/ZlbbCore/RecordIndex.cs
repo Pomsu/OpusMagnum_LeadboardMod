@@ -21,6 +21,13 @@ namespace ZlbbCore
 			public GameHistogram Histogram;
 		}
 
+		private sealed class CachedTargets
+		{
+			public int Version;
+			public Targets Targets;
+		}
+
+		private readonly Dictionary<string, CachedTargets> targetsCache = new Dictionary<string, CachedTargets>();
 		private readonly Dictionary<string, CachedGameHistogram> gameHistograms = new Dictionary<string, CachedGameHistogram>();
 		private readonly object sync = new object();
 		private readonly Dictionary<string, Dictionary<string, ZlbbRecord>> puzzles = new Dictionary<string, Dictionary<string, ZlbbRecord>>();
@@ -147,6 +154,61 @@ namespace ZlbbCore
 				GameHistogram built = GameScale.Build(Binning.SortedValues(byId.Values, metric, filter), maxBuckets, keepFraction);
 				gameHistograms[key] = new CachedGameHistogram { Version = version, Histogram = built };
 				return built;
+			}
+		}
+
+		/// <summary>The best distinct scores and the scores that reach the top 10% / 25%; null when the puzzle has no records with this metric. Memoised like the histograms.</summary>
+		public Targets GetTargets(string puzzleId, Metric metric, int count = 5, RecordFilter filter = null)
+		{
+			lock (sync)
+			{
+				Dictionary<string, ZlbbRecord> byId;
+				if (!puzzles.TryGetValue(puzzleId, out byId))
+					return null;
+				string key = puzzleId + "|" + metric.Key + "|" + (filter == null ? "-" : filter.Overlap + "/" + filter.Trackless) + "|" + count;
+				int version;
+				versions.TryGetValue(puzzleId, out version);
+				CachedTargets cached;
+				if (targetsCache.TryGetValue(key, out cached) && cached.Version == version)
+					return cached.Targets;
+
+				var values = new List<double>();
+				foreach (ZlbbRecord record in byId.Values)
+				{
+					if (filter != null && !filter.Matches(record))
+						continue;
+					double? value = metric.Get(record);
+					if (value.HasValue)
+						values.Add(value.Value);
+				}
+				Targets built = Targets.From(values, count);
+				targetsCache[key] = new CachedTargets { Version = version, Targets = built };
+				return built;
+			}
+		}
+
+		/// <summary>How many records beat a solve on all three of cost, cycles and area (instructions on production puzzles) at once.</summary>
+		public Domination GetDomination(string puzzleId, bool production, int cost, int cycles, int third)
+		{
+			lock (sync)
+			{
+				Dictionary<string, ZlbbRecord> byId;
+				if (!puzzles.TryGetValue(puzzleId, out byId))
+					return null;
+				var result = new Domination();
+				foreach (ZlbbRecord r in byId.Values)
+				{
+					int other = production ? r.Instructions : r.Area;
+					result.Total++;
+					if (r.Cost <= cost && r.Cycles <= cycles && other <= third)
+					{
+						if (r.Cost == cost && r.Cycles == cycles && other == third)
+							result.Equal++;
+						else
+							result.Dominating++;
+					}
+				}
+				return result;
 			}
 		}
 

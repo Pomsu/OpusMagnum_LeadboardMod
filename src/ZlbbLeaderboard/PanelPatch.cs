@@ -71,22 +71,81 @@ namespace ZlbbLeaderboard
 					if (!Puzzles.TryGetValue(puzzleId, out info))
 						return;
 				if (info.Metrics.Count == 0)
+				{
+					if (slot == 1)
+						DrawDataNotice(position); // no data yet: say why instead of showing plain panels without explanation
 					return;
+				}
 
 				Metric metric = MetricOf(data.field_1480, info.Production);
-				DrawStanding(info, metric, PlayerValue(info, metric), position);
+				DrawStanding(info, metric, PlayerValue(info, metric), position, slot == 0);
+				Hover(info, metric, position);
 
 				if (slot == 1) // one button per screen: on the middle panel
 				{
 					string label = "ALL " + info.Metrics.Count + " METRICS";
-					if (class_140.method_313(label, position + new Vector2(24f, 20f), 210, 44).method_824(true, true))
+					if (class_140.method_313(label, position + new Vector2(24f, 8f), 210, 36).method_824(true, true))
 						UI.OpenScreen(new AllMetricsScreen(info));
 				}
+				if (slot == 2) // the last panel of the screen: draw the tooltip on top of everything
+					DrawPendingTooltip();
 			}
 			catch (Exception e)
 			{
 				LogFailureOnce(e);
 			}
+		}
+
+		/// <summary>Tells the player why a puzzle screen has no zlbb data (first download still running, or no connection yet).</summary>
+		private static void DrawDataNotice(Vector2 panelPosition)
+		{
+			SyncService sync = ZlbbMod.Sync;
+			if (sync == null || sync.Index.Count > 0)
+				return;
+			string text = null;
+			if (sync.State == SyncState.Running || sync.State == SyncState.NotStarted)
+				text = "downloading zlbb data (first start only)" + new string('.', 1 + (int)(Environment.TickCount / 500 % 3));
+			else if (sync.State == SyncState.Failed)
+				text = "no zlbb data (offline?) - tried again at the next start";
+			if (text != null)
+				WriteSmall(text, panelPosition + new Vector2(129f, 128f));
+		}
+
+		// ---- hover tooltip over a bar ----
+
+		private static string pendingTooltip;
+
+		/// <summary>If the mouse is over the plot area of this panel, remember which bar it points at (drawn later by <see cref="DrawPendingTooltip"/>).</summary>
+		private static void Hover(PuzzleInfo info, Metric metric, Vector2 panelPosition)
+		{
+			if (metric == null)
+				return;
+			Vector2 local = Input.MousePos() - panelPosition;
+			// the game draws the bars from x = 18 to x = 248 and from y = 192 upwards (y points up)
+			if (local.X < 18f || local.X >= 248f || local.Y < 188f || local.Y > 312f)
+				return;
+			GameHistogram histogram = ZlbbMod.Sync.Index.GetGameHistogram(info.Id, metric);
+			if (histogram.IsEmpty)
+				return;
+			int bar = Math.Max(0, Math.Min(histogram.Counts.Length - 1, (int)((local.X - 18f) * histogram.Counts.Length / 230f)));
+			int from, to;
+			histogram.BarRange(bar, out from, out to);
+			int count = histogram.Counts[bar];
+			pendingTooltip = metric.Name + " " + (from == to ? from.ToString() : from + " - " + to) + ": " + count + (count == 1 ? " record" : " records");
+		}
+
+		/// <summary>Draws (and forgets) the tooltip chosen by <see cref="Hover"/>, after all panels so nothing covers it.</summary>
+		public static void DrawPendingTooltip()
+		{
+			string text = pendingTooltip;
+			pendingTooltip = null;
+			if (text == null)
+				return;
+			Vector2 mouse = Input.MousePos();
+			Vector2 at = mouse + new Vector2(16f, 14f);
+			Bounds2 size = class_135.method_291(text, at, class_238.field_1990.field_2140, (enum_0)0, 1f, 0.6f, float.MaxValue, float.MaxValue);
+			class_135.method_263(class_238.field_1989.field_71, Color.Black.WithAlpha(0.85f), at + new Vector2(-6f, -5f), new Vector2(size.Width + 12f, size.Height + 10f));
+			class_135.method_290(text, at, class_238.field_1990.field_2140, Color.White, (enum_0)0, 1f, 0.6f, float.MaxValue, float.MaxValue, 0, default(Color), null, int.MaxValue, false, true);
 		}
 
 		/// <summary>Builds the game's data object for one metric: our zlbb histogram plus the player's own scores where they are known.</summary>
@@ -144,7 +203,8 @@ namespace ZlbbLeaderboard
 				class_135.method_290(spec.Title.method_634().method_441(), center + new Vector2(2f, 151f), class_238.field_1990.field_2142, class_181.field_1719,
 					(enum_0)1, 1f, 0.6f, float.MaxValue, float.MaxValue, 0, default(Color), null, int.MaxValue, false, true);
 			}
-			DrawStanding(info, spec.Metric, PlayerValue(info, spec.Metric), position);
+			DrawStanding(info, spec.Metric, PlayerValue(info, spec.Metric), position, spec.Metric == Metrics.Sum || spec.Metric == Metrics.SumProduction);
+			Hover(info, spec.Metric, position);
 		}
 
 		// ---- the player's own value and rank ----
@@ -194,7 +254,7 @@ namespace ZlbbLeaderboard
 		}
 
 		/// <summary>Writes the player's value and rank among the zlbb records into the empty list area under a panel.</summary>
-		private static void DrawStanding(PuzzleInfo info, Metric metric, double? value, Vector2 panelPosition)
+		private static void DrawStanding(PuzzleInfo info, Metric metric, double? value, Vector2 panelPosition, bool showFrontierCheck)
 		{
 			if (metric == null)
 				return;
@@ -214,10 +274,31 @@ namespace ZlbbLeaderboard
 			else
 				first = "needs a steady-state run (not measurable)";
 
-			Vector2 center = new Vector2(129f, 0f);
-			WriteSmall(first, panelPosition + new Vector2(center.X, 128f));
+			const float x = 129f; // the panel's centre line
+			WriteSmall(first, panelPosition + new Vector2(x, 128f));
 			if (second != null)
-				WriteSmall(second, panelPosition + new Vector2(center.X, 106f));
+				WriteSmall(second, panelPosition + new Vector2(x, 106f));
+
+			// what to aim for: the best scores on zlbb and the scores that reach the top 10% / 25%
+			Targets targets = ZlbbMod.Sync.Index.GetTargets(info.Id, metric);
+			if (targets != null)
+			{
+				WriteSmall("BEST: " + targets.DescribeBest(), panelPosition + new Vector2(x, 84f));
+				WriteSmall(targets.DescribeThresholds(), panelPosition + new Vector2(x, 64f));
+			}
+
+			// does any record beat this solve on cost, cycles and area (instructions) together?
+			if (showFrontierCheck)
+			{
+				int? cost = Score(info, enum_133.Cost), cycles = Score(info, enum_133.Cycles);
+				int? third = Score(info, info.Production ? enum_133.Instructions : enum_133.Footprint);
+				if (cost.HasValue && cycles.HasValue && third.HasValue)
+				{
+					Domination domination = ZlbbMod.Sync.Index.GetDomination(info.Id, info.Production, cost.Value, cycles.Value, third.Value);
+					if (domination != null)
+						WriteSmall(domination.Describe(info.Production), panelPosition + new Vector2(x, 44f));
+				}
+			}
 		}
 
 		private static void WriteSmall(string text, Vector2 position)

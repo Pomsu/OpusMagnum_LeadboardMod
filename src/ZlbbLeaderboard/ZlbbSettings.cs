@@ -25,5 +25,13 @@ namespace ZlbbLeaderboard
 		[YamlIgnore]
 		[SettingsLabel("Sync with zlbb now")]
 		public SettingsButton SyncNow = ZlbbMod.StartManualSync;
+
+		[YamlIgnore]
+		[SettingsLabel("zlbb data status")]
+		public SettingsButton DataStatus = ZlbbMod.ShowDataStatus;
+
+		[YamlIgnore]
+		[SettingsLabel("Re-download zlbb data")]
+		public SettingsButton Redownload = ZlbbMod.AskRedownload;
 	}
 }
