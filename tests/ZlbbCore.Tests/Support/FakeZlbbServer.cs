@@ -27,6 +27,8 @@ namespace ZlbbCore.Tests.Support
 		public string Path;
 		public string UserAgent;
 		public string AcceptEncoding;
+		public string ContentType;
+		public byte[] Body = new byte[0];
 	}
 
 	/// <summary>Tiny in-process stand-in for zlbb.faendir.com; records every request so tests can count them.</summary>
@@ -93,7 +95,16 @@ namespace ZlbbCore.Tests.Support
 					Path = context.Request.Url.AbsolutePath,
 					UserAgent = context.Request.UserAgent,
 					AcceptEncoding = context.Request.Headers["Accept-Encoding"],
+					ContentType = context.Request.ContentType,
 				};
+				if (context.Request.HasEntityBody)
+				{
+					using (var copy = new MemoryStream())
+					{
+						context.Request.InputStream.CopyTo(copy);
+						recorded.Body = copy.ToArray();
+					}
+				}
 				lock (requests)
 					requests.Add(recorded);
 

@@ -31,6 +31,10 @@
       <HintPath>$(OMDir)\MonoMod.RuntimeDetour.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>$(OMDir)\YamlDotNet.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="MonoMod.Utils">
       <HintPath>$(OMDir)\MonoMod.Utils.dll</HintPath>
       <Private>false</Private>

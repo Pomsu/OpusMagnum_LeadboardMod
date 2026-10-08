@@ -61,7 +61,11 @@ namespace ZlbbLeaderboard
 			Vector2 bgPos = pos + new Vector2(WindowLayouts.FrameLeft, WindowLayouts.FrameBottom);
 			Vector2 bgSize = size - new Vector2(WindowLayouts.FrameWidth, WindowLayouts.FrameHeight);
 
-			UI.DrawLargeUiBackground(bgPos, bgSize);
+			// the game's background texture is only ~1.6k px wide, so a wider window is covered in several chunks
+			const float chunk = 1400f;
+			for (float x = 0f; x < bgSize.X; x += chunk)
+				for (float y = 0f; y < bgSize.Y; y += chunk)
+					UI.DrawLargeUiBackground(bgPos + new Vector2(x, y), new Vector2(Math.Min(chunk, bgSize.X - x), Math.Min(chunk, bgSize.Y - y)));
 			UI.DrawUiFrame(pos, size);
 			if (UI.DrawAndCheckCloseButton(pos, size, new Vector2(104f, 98f)))
 				UI.HandleCloseButton();
