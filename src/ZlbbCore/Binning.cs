@@ -41,7 +41,7 @@ namespace ZlbbCore
 		public const int DefaultMaxBuckets = 125;
 
 		/// <summary>Only the best part of the field is shown: scores up to this fraction of the records (lower is better). The long tail of the worst scores is cut off.</summary>
-		public const double DefaultKeepFraction = 0.85;
+		public const double DefaultKeepFraction = 0.5;
 
 		/// <summary>
 		/// Smallest score such that at least <paramref name="fraction"/> of the records score at or below it (lower scores are better).
