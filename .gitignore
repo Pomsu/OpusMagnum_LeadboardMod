@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+.vs/
+*.zip
+TestResults/
+# local decompiler output / game files must never be committed
+decomp/
+*.exe
+*.dll
+!.config/
